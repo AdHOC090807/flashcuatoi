@@ -94,6 +94,12 @@
   transform: rotateY(180deg);
 }
 
+.swipe-card-surface {
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flip-card-inner {
     transition: none;
