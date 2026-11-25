@@ -1,8 +1,9 @@
 import { db, DEFAULT_SETTINGS } from '@/db';
 import { createInitialSRSFields } from '@/features/srs/sm2';
-import type { Card, Deck } from '@/types';
+import type { Card, Deck, JapaneseWordType, VerbForms } from '@/types';
 
 export const SAMPLE_DECK_ID = 'deck_essential_en_vi';
+export const SAMPLE_JA_DECK_ID = 'deck_essential_ja_vi';
 
 interface SeedWord {
   term: string;
@@ -13,6 +14,20 @@ interface SeedWord {
   exampleTranslation: string;
   notes: string;
   tags: string[];
+}
+
+interface SeedJapaneseWord {
+  kana: string;
+  romaji: string;
+  kanji?: string;
+  meaning: string;
+  wordType: JapaneseWordType;
+  lesson: number;
+  example: string;
+  exampleTranslation: string;
+  notes: string;
+  tags: string[];
+  verbForms?: VerbForms;
 }
 
 export const SAMPLE_WORDS: SeedWord[] = [
@@ -223,6 +238,351 @@ export const SAMPLE_WORDS: SeedWord[] = [
   },
 ];
 
+export const SAMPLE_JAPANESE_WORDS: SeedJapaneseWord[] = [
+  {
+    kana: 'おはよう',
+    romaji: 'ohayou',
+    meaning: 'chào buổi sáng',
+    wordType: 'expression',
+    lesson: 1,
+    example: 'おはよう、きょうもげんきですね。',
+    exampleTranslation: 'Chào buổi sáng, hôm nay bạn cũng khỏe nhỉ.',
+    notes: 'Polite form: おはようございます.',
+    tags: ['greeting', 'daily'],
+  },
+  {
+    kana: 'ありがとう',
+    romaji: 'arigatou',
+    meaning: 'cảm ơn',
+    wordType: 'expression',
+    lesson: 1,
+    example: 'いつもありがとうございます。',
+    exampleTranslation: 'Luôn cảm ơn bạn rất nhiều.',
+    notes: 'Polite form: ありがとうございます.',
+    tags: ['greeting', 'daily'],
+  },
+  {
+    kana: 'みず',
+    romaji: 'mizu',
+    kanji: '水',
+    meaning: 'nước',
+    wordType: 'noun',
+    lesson: 1,
+    example: 'つめたいみずをのみたいです。',
+    exampleTranslation: 'Tôi muốn uống nước lạnh.',
+    notes: 'Basic everyday noun.',
+    tags: ['food', 'daily'],
+  },
+  {
+    kana: 'ごはん',
+    romaji: 'gohan',
+    kanji: 'ご飯',
+    meaning: 'cơm, bữa ăn',
+    wordType: 'noun',
+    lesson: 1,
+    example: 'あさごはんをたべましたか。',
+    exampleTranslation: 'Bạn đã ăn sáng chưa?',
+    notes: 'Also used in あさごはん (breakfast), ひるごはん (lunch).',
+    tags: ['food', 'daily'],
+  },
+  {
+    kana: 'ともだち',
+    romaji: 'tomodachi',
+    kanji: '友達',
+    meaning: 'bạn bè',
+    wordType: 'noun',
+    lesson: 1,
+    example: 'ともだちとカフェへいきます。',
+    exampleTranslation: 'Tôi đi quán cà phê cùng bạn.',
+    notes: 'Common noun.',
+    tags: ['people', 'daily'],
+  },
+  {
+    kana: 'たべる',
+    romaji: 'taberu',
+    kanji: '食べる',
+    meaning: 'ăn',
+    wordType: 'verb',
+    lesson: 2,
+    example: 'まいにちりんごをたべます。',
+    exampleTranslation: 'Mỗi ngày tôi đều ăn táo.',
+    notes: 'Ichidan (Group 2) verb.',
+    tags: ['verb', 'food'],
+    verbForms: {
+      masu: 'たべます',
+      te: 'たべて',
+      ta: 'たべた',
+      nai: 'たべない',
+    },
+  },
+  {
+    kana: 'のむ',
+    romaji: 'nomu',
+    kanji: '飲む',
+    meaning: 'uống',
+    wordType: 'verb',
+    lesson: 2,
+    example: 'あさにおちゃをのみます。',
+    exampleTranslation: 'Buổi sáng tôi uống trà.',
+    notes: 'Godan (Group 1) verb.',
+    tags: ['verb', 'food'],
+    verbForms: {
+      masu: 'のみます',
+      te: 'のんで',
+      ta: 'のんだ',
+      nai: 'のまない',
+    },
+  },
+  {
+    kana: 'いく',
+    romaji: 'iku',
+    kanji: '行く',
+    meaning: 'đi',
+    wordType: 'verb',
+    lesson: 2,
+    example: 'あしたとしょかんへいきます。',
+    exampleTranslation: 'Ngày mai tôi đi thư viện.',
+    notes: 'Note irregular te/ta form: いって / いった.',
+    tags: ['verb', 'travel'],
+    verbForms: {
+      masu: 'いきます',
+      te: 'いって',
+      ta: 'いった',
+      nai: 'いかない',
+    },
+  },
+  {
+    kana: 'くる',
+    romaji: 'kuru',
+    kanji: '来る',
+    meaning: 'đến',
+    wordType: 'verb',
+    lesson: 2,
+    example: 'ともだちがいえにきます。',
+    exampleTranslation: 'Bạn tôi sẽ đến nhà.',
+    notes: 'Irregular verb.',
+    tags: ['verb', 'travel'],
+    verbForms: {
+      masu: 'きます',
+      te: 'きて',
+      ta: 'きた',
+      nai: 'こない',
+    },
+  },
+  {
+    kana: 'みる',
+    romaji: 'miru',
+    kanji: '見る',
+    meaning: 'xem, nhìn',
+    wordType: 'verb',
+    lesson: 2,
+    example: 'しゅうまつにえいがをみます。',
+    exampleTranslation: 'Cuối tuần tôi xem phim.',
+    notes: 'Ichidan (Group 2) verb.',
+    tags: ['verb', 'daily'],
+    verbForms: {
+      masu: 'みます',
+      te: 'みて',
+      ta: 'みた',
+      nai: 'みない',
+    },
+  },
+  {
+    kana: 'きく',
+    romaji: 'kiku',
+    kanji: '聞く',
+    meaning: 'nghe, hỏi',
+    wordType: 'verb',
+    lesson: 3,
+    example: 'おんがくをきくのがすきです。',
+    exampleTranslation: 'Tôi thích nghe nhạc.',
+    notes: 'Godan verb.',
+    tags: ['verb', 'daily'],
+    verbForms: {
+      masu: 'ききます',
+      te: 'きいて',
+      ta: 'きいた',
+      nai: 'きかない',
+    },
+  },
+  {
+    kana: 'よむ',
+    romaji: 'yomu',
+    kanji: '読む',
+    meaning: 'đọc',
+    wordType: 'verb',
+    lesson: 3,
+    example: 'よるにほんをよみます。',
+    exampleTranslation: 'Buổi tối tôi đọc sách.',
+    notes: 'Godan verb.',
+    tags: ['verb', 'study'],
+    verbForms: {
+      masu: 'よみます',
+      te: 'よんで',
+      ta: 'よんだ',
+      nai: 'よまない',
+    },
+  },
+  {
+    kana: 'かく',
+    romaji: 'kaku',
+    kanji: '書く',
+    meaning: 'viết',
+    wordType: 'verb',
+    lesson: 3,
+    example: 'ノートににっきをかきます。',
+    exampleTranslation: 'Tôi viết nhật ký vào sổ tay.',
+    notes: 'Godan verb.',
+    tags: ['verb', 'study'],
+    verbForms: {
+      masu: 'かきます',
+      te: 'かいて',
+      ta: 'かいた',
+      nai: 'かかない',
+    },
+  },
+  {
+    kana: 'はなす',
+    romaji: 'hanasu',
+    kanji: '話す',
+    meaning: 'nói, trò chuyện',
+    wordType: 'verb',
+    lesson: 3,
+    example: 'にほんごでゆっくりはなします。',
+    exampleTranslation: 'Tôi nói chậm rãi bằng tiếng Nhật.',
+    notes: 'Godan verb ending in -su.',
+    tags: ['verb', 'communication'],
+    verbForms: {
+      masu: 'はなします',
+      te: 'はなして',
+      ta: 'はなした',
+      nai: 'はなさない',
+    },
+  },
+  {
+    kana: 'おおきい',
+    romaji: 'ookii',
+    kanji: '大きい',
+    meaning: 'to, lớn',
+    wordType: 'i-adj',
+    lesson: 3,
+    example: 'あのこうえんはとてもおおきいです。',
+    exampleTranslation: 'Công viên kia rất lớn.',
+    notes: 'I-adjective with long vowel おお.',
+    tags: ['adjective', 'daily'],
+  },
+  {
+    kana: 'ちいさい',
+    romaji: 'chiisai',
+    kanji: '小さい',
+    meaning: 'nhỏ, bé',
+    wordType: 'i-adj',
+    lesson: 4,
+    example: 'ちいさいいぬがかわいいです。',
+    exampleTranslation: 'Chú chó nhỏ thật dễ thương.',
+    notes: 'Antonym of おおきい.',
+    tags: ['adjective', 'daily'],
+  },
+  {
+    kana: 'あたらしい',
+    romaji: 'atarashii',
+    kanji: '新しい',
+    meaning: 'mới',
+    wordType: 'i-adj',
+    lesson: 4,
+    example: 'あたらしいことばをおぼえます。',
+    exampleTranslation: 'Tôi ghi nhớ từ vựng mới.',
+    notes: 'I-adjective.',
+    tags: ['adjective', 'study'],
+  },
+  {
+    kana: 'げんき',
+    romaji: 'genki',
+    kanji: '元気',
+    meaning: 'khỏe mạnh, tràn đầy năng lượng',
+    wordType: 'na-adj',
+    lesson: 4,
+    example: 'げんきなこえであいさつします。',
+    exampleTranslation: 'Chào hỏi bằng giọng nói tràn đầy năng lượng.',
+    notes: 'Na-adjective.',
+    tags: ['adjective', 'daily'],
+  },
+  {
+    kana: 'しずか',
+    romaji: 'shizuka',
+    kanji: '静か',
+    meaning: 'yên tĩnh',
+    wordType: 'na-adj',
+    lesson: 4,
+    example: 'このへやはしずかです。',
+    exampleTranslation: 'Căn phòng này yên tĩnh.',
+    notes: 'Na-adjective.',
+    tags: ['adjective', 'daily'],
+  },
+  {
+    kana: 'コーヒー',
+    romaji: 'koohii',
+    meaning: 'cà phê',
+    wordType: 'noun',
+    lesson: 4,
+    example: 'あついコーヒーをください。',
+    exampleTranslation: 'Cho tôi một ly cà phê nóng.',
+    notes: 'Katakana loanword with long vowels (ー).',
+    tags: ['katakana', 'food'],
+  },
+];
+
+export function buildJapaneseSampleCards(now = Date.now()): Card[] {
+  return SAMPLE_JAPANESE_WORDS.map((word, index) => ({
+    id: `card_ja_seed_${index + 1}`,
+    deckId: SAMPLE_JA_DECK_ID,
+    term: word.kana,
+    meaning: word.meaning,
+    phonetic: word.romaji,
+    partOfSpeech: word.wordType,
+    example: word.example,
+    exampleTranslation: word.exampleTranslation,
+    notes: word.notes,
+    imageUrl: '',
+    tags: word.tags,
+    kana: word.kana,
+    romaji: word.romaji,
+    kanji: word.kanji,
+    wordType: word.wordType,
+    lesson: word.lesson,
+    verbForms: word.verbForms,
+    ...createInitialSRSFields(now + index),
+    createdAt: now + index,
+    updatedAt: now + index,
+  }));
+}
+
+export async function seedJapaneseSampleDeck(): Promise<boolean> {
+  const existing = await db.decks.get(SAMPLE_JA_DECK_ID);
+  if (existing) return false;
+
+  const now = Date.now();
+  const jaDeck: Deck = {
+    id: SAMPLE_JA_DECK_ID,
+    name: 'Beginner Japanese → Vietnamese',
+    description:
+      '20 everyday Japanese words across Lessons 1–4 with kana, romaji, optional kanji, and verb conjugations.',
+    color: '#ec4899',
+    emoji: '🇯🇵',
+    language: 'ja',
+    tags: ['japanese', 'vietnamese', 'starter'],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const jaCards = buildJapaneseSampleCards(now);
+  await db.transaction('rw', db.decks, db.cards, async () => {
+    await db.decks.put(jaDeck);
+    await db.cards.bulkPut(jaCards);
+  });
+  return true;
+}
+
 export async function seedDatabaseIfEmpty(): Promise<boolean> {
   const existingSettings = await db.settings.get('default');
   if (!existingSettings) {
@@ -242,6 +602,7 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
       '20 high-frequency, expressive English words with IPA phonetics, Vietnamese meanings, and natural examples.',
     color: '#4f46e5',
     emoji: '📘',
+    language: 'en',
     tags: ['english', 'vietnamese', 'starter'],
     createdAt: now,
     updatedAt: now,
@@ -269,5 +630,6 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
     await db.cards.bulkPut(sampleCards);
   });
 
+  await seedJapaneseSampleDeck();
   return true;
 }

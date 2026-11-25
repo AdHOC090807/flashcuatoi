@@ -2,11 +2,25 @@ export type CardStatus = 'new' | 'learning' | 'review';
 
 export type ReviewRating = 1 | 2 | 3 | 4; // 1 = Again, 2 = Hard, 3 = Good, 4 = Easy
 
-export type StudyMode = 'flip' | 'quiz' | 'typing' | 'match' | 'listen';
+export type StudyMode = 'flip' | 'quiz' | 'typing' | 'match' | 'listen' | 'conjugation';
+
+export type StudyDirection = 'term_to_meaning' | 'meaning_to_term' | 'listen_to_term';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type AppLanguage = 'en' | 'vi';
+
+export type DeckLanguage = 'en' | 'ja';
+
+export type JapaneseWordType =
+  'verb' | 'i-adj' | 'na-adj' | 'noun' | 'adverb' | 'particle' | 'expression';
+
+export interface VerbForms {
+  masu?: string;
+  te?: string;
+  ta?: string;
+  nai?: string;
+}
 
 export interface Deck {
   id: string;
@@ -14,6 +28,7 @@ export interface Deck {
   description: string;
   color: string;
   emoji: string;
+  language: DeckLanguage;
   tags: string[];
   createdAt: number;
   updatedAt: number;
@@ -31,6 +46,13 @@ export interface Card {
   notes: string;
   imageUrl: string;
   tags: string[];
+  // Optional Japanese-specific fields
+  kana?: string;
+  romaji?: string;
+  kanji?: string;
+  wordType?: JapaneseWordType | string;
+  lesson?: number;
+  verbForms?: VerbForms;
   // SM-2 SRS fields
   easeFactor: number;
   interval: number; // in days
@@ -65,6 +87,8 @@ export interface UserSettings {
   ttsVoiceURI: string;
   ttsLang: string;
   ttsRate: number;
+  ttsAutoplay: boolean;
+  showKanji: boolean;
   remindersEnabled: boolean;
   reminderTime: string; // HH:mm
   aiEnabled: boolean;
@@ -101,7 +125,7 @@ export interface BadgeDefinition {
 export interface FullBackupPayload {
   version: number;
   exportedAt: string;
-  decks: Deck[];
+  decks: Array<Omit<Deck, 'language'> & { language?: DeckLanguage }>;
   cards: Card[];
   reviewLogs: ReviewLog[];
   settings?: Partial<UserSettings>;

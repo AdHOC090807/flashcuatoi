@@ -2,13 +2,24 @@ import { db, DEFAULT_SETTINGS, getOrCreateSettings } from '@/db';
 import { calculateXPForReview, evaluateUnlockedBadges } from '@/features/gamification';
 import { calculateSM2, createInitialSRSFields } from '@/features/srs/sm2';
 import { createId, normalizeText, startOfDayMs } from '@/lib/utils';
-import type { Card, Deck, ReviewLog, ReviewRating, StudyMode, UserSettings } from '@/types';
+import type {
+  Card,
+  Deck,
+  DeckLanguage,
+  JapaneseWordType,
+  ReviewLog,
+  ReviewRating,
+  StudyMode,
+  UserSettings,
+  VerbForms,
+} from '@/types';
 
 export interface DeckInput {
   name: string;
   description?: string;
   color?: string;
   emoji?: string;
+  language?: DeckLanguage;
   tags?: string[];
 }
 
@@ -23,6 +34,12 @@ export interface CardInput {
   notes?: string;
   imageUrl?: string;
   tags?: string[];
+  kana?: string;
+  romaji?: string;
+  kanji?: string;
+  wordType?: JapaneseWordType | string;
+  lesson?: number;
+  verbForms?: VerbForms;
 }
 
 export async function createDeck(input: DeckInput): Promise<Deck> {
@@ -32,7 +49,8 @@ export async function createDeck(input: DeckInput): Promise<Deck> {
     name: input.name.trim(),
     description: (input.description ?? '').trim(),
     color: input.color || '#4f46e5',
-    emoji: input.emoji || '📚',
+    emoji: input.emoji || (input.language === 'ja' ? '🇯🇵' : '📚'),
+    language: input.language ?? 'en',
     tags: input.tags ?? [],
     createdAt: now,
     updatedAt: now,
@@ -58,31 +76,45 @@ export async function deleteDeck(id: string): Promise<void> {
   });
 }
 
+function getDuplicateKey(cardOrTerm: { term: string; kana?: string }): string {
+  const raw = (cardOrTerm.kana || cardOrTerm.term).trim();
+  const normalized = normalizeText(raw);
+  return normalized || raw.toLowerCase();
+}
+
 export async function findDuplicateTerm(
   deckId: string,
   term: string,
   excludeCardId?: string
 ): Promise<Card | undefined> {
-  const normalized = normalizeText(term);
-  if (!normalized) return undefined;
+  const key = getDuplicateKey({ term });
+  if (!key) return undefined;
   const deckCards = await db.cards.where('deckId').equals(deckId).toArray();
-  return deckCards.find((c) => c.id !== excludeCardId && normalizeText(c.term) === normalized);
+  return deckCards.find((c) => c.id !== excludeCardId && getDuplicateKey(c) === key);
 }
 
 export async function createCard(input: CardInput): Promise<Card> {
   const now = Date.now();
+  const kana = input.kana?.trim();
+  const term = (input.term || kana || '').trim();
   const card: Card = {
     id: createId('card'),
     deckId: input.deckId,
-    term: input.term.trim(),
+    term,
     meaning: input.meaning.trim(),
-    phonetic: (input.phonetic ?? '').trim(),
-    partOfSpeech: (input.partOfSpeech ?? '').trim(),
+    phonetic: (input.phonetic ?? input.romaji ?? '').trim(),
+    partOfSpeech: (input.partOfSpeech ?? input.wordType ?? '').trim(),
     example: (input.example ?? '').trim(),
     exampleTranslation: (input.exampleTranslation ?? '').trim(),
     notes: (input.notes ?? '').trim(),
     imageUrl: (input.imageUrl ?? '').trim(),
     tags: input.tags ?? [],
+    kana: kana || undefined,
+    romaji: input.romaji?.trim() || undefined,
+    kanji: input.kanji?.trim() || undefined,
+    wordType: input.wordType?.trim() || undefined,
+    lesson: input.lesson,
+    verbForms: input.verbForms,
     ...createInitialSRSFields(now),
     createdAt: now,
     updatedAt: now,
@@ -101,7 +133,7 @@ export async function bulkCreateCards(
   const existing = await db.cards.where('deckId').equals(deckId).toArray();
   const byTerm = new Map<string, Card>();
   for (const c of existing) {
-    byTerm.set(normalizeText(c.term), c);
+    byTerm.set(getDuplicateKey(c), c);
   }
 
   let added = 0;
@@ -110,13 +142,14 @@ export async function bulkCreateCards(
   const toPut: Card[] = [];
 
   items.forEach((item, idx) => {
-    const term = item.term.trim();
+    const kana = item.kana?.trim();
+    const term = (item.term || kana || '').trim();
     const meaning = item.meaning.trim();
     if (!term || !meaning) {
       skipped += 1;
       return;
     }
-    const key = normalizeText(term);
+    const key = getDuplicateKey({ term, kana });
     const match = byTerm.get(key);
 
     if (match && duplicateStrategy === 'skip') {
@@ -127,14 +160,21 @@ export async function bulkCreateCards(
     if (match && duplicateStrategy === 'update') {
       const updatedCard: Card = {
         ...match,
+        term,
         meaning,
-        phonetic: item.phonetic?.trim() ?? match.phonetic,
-        partOfSpeech: item.partOfSpeech?.trim() ?? match.partOfSpeech,
+        phonetic: item.phonetic?.trim() ?? item.romaji?.trim() ?? match.phonetic,
+        partOfSpeech: item.partOfSpeech?.trim() ?? item.wordType?.trim() ?? match.partOfSpeech,
         example: item.example?.trim() ?? match.example,
         exampleTranslation: item.exampleTranslation?.trim() ?? match.exampleTranslation,
         notes: item.notes?.trim() ?? match.notes,
         imageUrl: item.imageUrl?.trim() ?? match.imageUrl,
         tags: item.tags?.length ? item.tags : match.tags,
+        kana: kana ?? match.kana,
+        romaji: item.romaji?.trim() ?? match.romaji,
+        kanji: item.kanji?.trim() ?? match.kanji,
+        wordType: item.wordType?.trim() ?? match.wordType,
+        lesson: item.lesson ?? match.lesson,
+        verbForms: item.verbForms ?? match.verbForms,
         updatedAt: now + idx,
       };
       toPut.push(updatedCard);
@@ -148,13 +188,19 @@ export async function bulkCreateCards(
       deckId,
       term,
       meaning,
-      phonetic: (item.phonetic ?? '').trim(),
-      partOfSpeech: (item.partOfSpeech ?? '').trim(),
+      phonetic: (item.phonetic ?? item.romaji ?? '').trim(),
+      partOfSpeech: (item.partOfSpeech ?? item.wordType ?? '').trim(),
       example: (item.example ?? '').trim(),
       exampleTranslation: (item.exampleTranslation ?? '').trim(),
       notes: (item.notes ?? '').trim(),
       imageUrl: (item.imageUrl ?? '').trim(),
       tags: item.tags ?? [],
+      kana: kana || undefined,
+      romaji: item.romaji?.trim() || undefined,
+      kanji: item.kanji?.trim() || undefined,
+      wordType: item.wordType?.trim() || undefined,
+      lesson: item.lesson,
+      verbForms: item.verbForms,
       ...createInitialSRSFields(now + idx),
       createdAt: now + idx,
       updatedAt: now + idx,
@@ -179,6 +225,10 @@ export async function updateCard(id: string, patch: Partial<CardInput>): Promise
     ...patch,
     term: patch.term !== undefined ? patch.term.trim() : undefined,
     meaning: patch.meaning !== undefined ? patch.meaning.trim() : undefined,
+    kana: patch.kana !== undefined ? patch.kana.trim() || undefined : undefined,
+    romaji: patch.romaji !== undefined ? patch.romaji.trim() || undefined : undefined,
+    kanji: patch.kanji !== undefined ? patch.kanji.trim() || undefined : undefined,
+    wordType: patch.wordType !== undefined ? patch.wordType.trim() || undefined : undefined,
     updatedAt: Date.now(),
   });
 }

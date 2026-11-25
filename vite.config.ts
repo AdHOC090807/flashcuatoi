@@ -38,8 +38,16 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/.*\.woff2?$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'self-hosted-fonts',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',

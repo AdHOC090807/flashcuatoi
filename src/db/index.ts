@@ -15,6 +15,36 @@ export class LexiCardsDatabase extends Dexie {
       reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
       settings: 'id',
     });
+
+    this.version(2)
+      .stores({
+        decks: 'id, name, language, createdAt, updatedAt, *tags',
+        cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
+        reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
+        settings: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('decks')
+          .toCollection()
+          .modify((deck: Partial<Deck>) => {
+            if (!deck.language) {
+              deck.language = 'en';
+            }
+          });
+
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((setting: Partial<UserSettings>) => {
+            if (setting.showKanji === undefined) {
+              setting.showKanji = false;
+            }
+            if (setting.ttsAutoplay === undefined) {
+              setting.ttsAutoplay = false;
+            }
+          });
+      });
   }
 }
 
@@ -29,6 +59,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   ttsVoiceURI: '',
   ttsLang: 'en-US',
   ttsRate: 1.0,
+  ttsAutoplay: false,
+  showKanji: false,
   remindersEnabled: false,
   reminderTime: '20:00',
   aiEnabled: false,
