@@ -84,4 +84,52 @@ test.describe('LexiCards smoke tests', () => {
       expect(hasHorizontalOverflow).toBe(false);
     }
   });
+
+  test('Quick Import by Paste creates deck, shows preview, saves, studies, and supports /import/paste at 360px', async ({
+    page,
+  }) => {
+    const consoleErrors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    await page.goto('/decks');
+    await page.getByRole('button', { name: 'Skip' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+
+    await page.getByRole('button', { name: 'Paste to create' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    await dialog
+      .locator('#paste-import-textarea')
+      .fill('# Quick Paste E2E\nたべます - ăn\nのみます - uống\nおはよう - chào buổi sáng');
+
+    // Debounced live preview (300ms) shows 3 valid rows
+    await expect(dialog.getByText('3 valid, 0 duplicates, 0 errors')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Import 3 cards' })).toBeEnabled();
+
+    await dialog.getByRole('button', { name: 'Import 3 cards' }).click();
+    await expect(dialog).toBeHidden();
+
+    // New deck appears and opens cleanly for study
+    await expect(page.getByRole('heading', { name: 'Quick Paste E2E' })).toBeVisible();
+    await page.getByRole('heading', { name: 'Quick Paste E2E' }).click();
+    await page.getByRole('link', { name: 'Flip Card' }).click();
+    await page.getByRole('button', { name: 'Show Answer', exact: true }).click();
+    await page.getByRole('button', { name: /Good/ }).click();
+
+    // Standalone /import/paste route at 360px mobile viewport
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto('/import/paste');
+    await expect(page.getByRole('heading', { name: 'Quick Import by Paste' })).toBeVisible();
+    const hasMobileOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(hasMobileOverflow).toBe(false);
+
+    expect(consoleErrors).toEqual([]);
+  });
 });
