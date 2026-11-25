@@ -262,6 +262,7 @@ export async function recordCardReview(
   elapsedMs: number
 ): Promise<{
   updatedCard: Card;
+  reviewLogId: string;
   xpEarned: number;
   newlyUnlockedBadges: string[];
 }> {
@@ -304,7 +305,28 @@ export async function recordCardReview(
     });
   });
 
-  return { updatedCard, xpEarned, newlyUnlockedBadges };
+  return { updatedCard, reviewLogId: log.id, xpEarned, newlyUnlockedBadges };
+}
+
+export interface UndoReviewPayload {
+  previousCard: Card;
+  reviewLogId: string;
+  xpEarned: number;
+}
+
+/**
+ * Revert a card review: restore previous SM-2 card snapshot, delete the review log entry,
+ * and deduct the XP earned for that review inside a single Dexie transaction.
+ */
+export async function undoCardReview(payload: UndoReviewPayload): Promise<Card> {
+  await db.transaction('rw', db.cards, db.reviewLogs, db.settings, async () => {
+    await db.cards.put(payload.previousCard);
+    await db.reviewLogs.delete(payload.reviewLogId);
+    const settings = await getOrCreateSettings();
+    const nextXp = Math.max(0, (settings.xp || 0) - payload.xpEarned);
+    await db.settings.update('default', { xp: nextXp });
+  });
+  return payload.previousCard;
 }
 
 export async function updateSettings(patch: Partial<Omit<UserSettings, 'id'>>): Promise<void> {

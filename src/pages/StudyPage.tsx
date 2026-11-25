@@ -13,8 +13,9 @@ import {
   Volume2,
 } from 'lucide-react';
 import { db } from '@/db';
-import { recordCardReview, updateSettings } from '@/db/actions';
+import { recordCardReview, undoCardReview, updateSettings } from '@/db/actions';
 import { buildStudyQueue } from '@/features/srs/sm2';
+import { RATING_TO_DIRECTION, type SwipeDirection } from '@/features/study/swipeDecision';
 import { startOfDayMs, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -29,6 +30,22 @@ import { SessionSummary } from '@/components/study/SessionSummary';
 import type { Card, ReviewRating, StudyDirection, StudyMode } from '@/types';
 
 const VALID_MODES: StudyMode[] = ['flip', 'quiz', 'typing', 'match', 'listen', 'conjugation'];
+const MAX_UNDO_HISTORY = 20;
+
+interface SessionUndoEntry {
+  previousCard: Card;
+  previousIndex: number;
+  previousQueue: Card[];
+  previousStats: {
+    reviewed: number;
+    correct: number;
+    xp: number;
+    badges: string[];
+  };
+  reviewLogId: string;
+  xpEarned: number;
+  lastSwipeDirection: SwipeDirection;
+}
 
 export function StudyPage() {
   const { deckId = 'all' } = useParams<{ deckId: string }>();
@@ -66,6 +83,10 @@ export function StudyPage() {
     badges: [] as string[],
   });
   const [completed, setCompleted] = useState(false);
+  const [undoStack, setUndoStack] = useState<SessionUndoEntry[]>([]);
+  const [enteringFromDirection, setEnteringFromDirection] = useState<SwipeDirection | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
+  const undoBusyRef = useRef(false);
   const cardShownAtRef = useRef<number>(Date.now());
 
   const deckCards = useMemo(() => {
@@ -113,6 +134,9 @@ export function StudyPage() {
     setSessionQueue(queue);
     setCurrentIndex(0);
     setCompleted(false);
+    setUndoStack([]);
+    setEnteringFromDirection(null);
+    setLiveAnnouncement('');
     setSessionStats({ reviewed: 0, correct: 0, xp: 0, badges: [] });
     cardShownAtRef.current = Date.now();
   };
@@ -138,16 +162,65 @@ export function StudyPage() {
     if (lessonTo !== null) nextParams.lessonTo = String(lessonTo);
     setSearchParams(nextParams);
     setSessionQueue(null);
+    setUndoStack([]);
+    setEnteringFromDirection(null);
   };
 
-  const handleRateOrAnswer = async (rating: ReviewRating, isCorrect?: boolean) => {
+  const handleUndo = async () => {
+    if (undoBusyRef.current || undoStack.length === 0) return;
+    undoBusyRef.current = true;
+
+    try {
+      const entry = undoStack[undoStack.length - 1];
+      await undoCardReview({
+        previousCard: entry.previousCard,
+        reviewLogId: entry.reviewLogId,
+        xpEarned: entry.xpEarned,
+      });
+
+      setUndoStack((prev) => prev.slice(0, -1));
+      setSessionQueue(entry.previousQueue);
+      setCurrentIndex(entry.previousIndex);
+      setSessionStats(entry.previousStats);
+      setCompleted(false);
+      setEnteringFromDirection(entry.lastSwipeDirection);
+      cardShownAtRef.current = Date.now();
+
+      const remainingAfterUndo = Math.max(0, entry.previousQueue.length - entry.previousIndex);
+      setLiveAnnouncement(t('study.undoAnnouncement', { remaining: remainingAfterUndo }));
+    } finally {
+      undoBusyRef.current = false;
+    }
+  };
+
+  const handleRateOrAnswer = async (
+    rating: ReviewRating,
+    isCorrect?: boolean,
+    swipeDir?: SwipeDirection
+  ) => {
     if (!sessionQueue) return;
     const card = sessionQueue[currentIndex];
     if (!card) return;
 
+    const prevStatsSnapshot = { ...sessionStats, badges: [...sessionStats.badges] };
+    const prevQueueSnapshot = [...sessionQueue];
     const elapsedMs = Date.now() - cardShownAtRef.current;
     const result = await recordCardReview(card, rating, mode, elapsedMs);
     const correct = isCorrect !== undefined ? isCorrect : rating >= 2;
+
+    if (mode === 'flip') {
+      const entry: SessionUndoEntry = {
+        previousCard: card,
+        previousIndex: currentIndex,
+        previousQueue: prevQueueSnapshot,
+        previousStats: prevStatsSnapshot,
+        reviewLogId: result.reviewLogId,
+        xpEarned: result.xpEarned,
+        lastSwipeDirection: swipeDir ?? RATING_TO_DIRECTION[rating],
+      };
+      setUndoStack((prev) => [...prev.slice(-(MAX_UNDO_HISTORY - 1)), entry]);
+      setEnteringFromDirection(null);
+    }
 
     setSessionStats((prev) => ({
       reviewed: prev.reviewed + 1,
@@ -162,10 +235,19 @@ export function StudyPage() {
       setSessionQueue(nextQueue);
     }
 
-    if (currentIndex + 1 >= nextQueue.length) {
+    const nextIndex = currentIndex + 1;
+    const remaining = Math.max(0, nextQueue.length - nextIndex);
+    setLiveAnnouncement(
+      t('study.ratedAnnouncement', {
+        rating: t(`study.ratings.${rating}`),
+        remaining,
+      })
+    );
+
+    if (nextIndex >= nextQueue.length) {
       setCompleted(true);
     } else {
-      setCurrentIndex((i) => i + 1);
+      setCurrentIndex(nextIndex);
       cardShownAtRef.current = Date.now();
     }
   };
@@ -184,6 +266,34 @@ export function StudyPage() {
     return base;
   }, [t, isJapanese, hasConjugationCards]);
 
+  const stackKeys = useMemo(() => {
+    if (!sessionQueue) return [];
+    const seen = new Map<string, number>();
+    return sessionQueue.map((c) => {
+      const count = seen.get(c.id) ?? 0;
+      seen.set(c.id, count + 1);
+      return `${c.id}#${count}`;
+    });
+  }, [sessionQueue]);
+
+  useEffect(() => {
+    if (!completed || mode !== 'flip' || undoStack.length === 0) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+      if (
+        e.key.toLowerCase() === 'u' ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z')
+      ) {
+        e.preventDefault();
+        void handleUndo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completed, mode, undoStack.length]);
+
   if (!deckCards || !settings || sessionQueue === null) {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
@@ -194,6 +304,7 @@ export function StudyPage() {
   }
 
   const currentCard = sessionQueue[currentIndex];
+  const remainingCards = completed ? 0 : Math.max(0, sessionQueue.length - currentIndex);
   const progressPct =
     sessionQueue.length > 0
       ? Math.round(((completed ? sessionQueue.length : currentIndex) / sessionQueue.length) * 100)
@@ -201,6 +312,9 @@ export function StudyPage() {
 
   return (
     <div className="space-y-6">
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveAnnouncement}
+      </div>
       {/* Header & Mode Switcher */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
@@ -293,13 +407,19 @@ export function StudyPage() {
         </div>
       )}
 
-      {/* Progress Bar */}
+      {/* Progress Bar & Counters */}
       {sessionQueue.length > 0 && mode !== 'match' && (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{t('study.doneCount', { count: sessionStats.reviewed })}</span>
+            <span>{t('study.remainingCount', { count: remainingCards })}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
       )}
 
@@ -315,6 +435,8 @@ export function StudyPage() {
           }
           xpEarned={sessionStats.xp}
           unlockedBadgeIds={sessionStats.badges}
+          canUndoLast={mode === 'flip' && undoStack.length > 0}
+          onUndoLast={() => void handleUndo()}
           onRestart={() => {
             setPracticeAll(true);
             void initQueue(true);
@@ -359,15 +481,23 @@ export function StudyPage() {
       ) : mode === 'flip' && currentCard ? (
         <FlipCardMode
           card={currentCard}
+          upcomingCards={sessionQueue.slice(currentIndex + 1, currentIndex + 3)}
+          activeCardKey={stackKeys[currentIndex]}
+          upcomingCardKeys={stackKeys.slice(currentIndex + 1, currentIndex + 3)}
+          cardIndex={currentIndex}
+          totalCards={sessionQueue.length}
           isJapanese={isJapanese}
           showKanji={showKanji}
           direction={direction}
           ttsAutoplay={ttsAutoplay}
           canGoPrev={currentIndex > 0}
           canGoNext={currentIndex + 1 < sessionQueue.length}
+          canUndo={undoStack.length > 0}
+          enteringFromDirection={enteringFromDirection}
           onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
           onNext={() => setCurrentIndex((i) => Math.min(sessionQueue.length - 1, i + 1))}
-          onRate={(r) => void handleRateOrAnswer(r)}
+          onRate={(r, dir) => void handleRateOrAnswer(r, undefined, dir)}
+          onUndo={() => void handleUndo()}
         />
       ) : mode === 'quiz' && currentCard ? (
         <QuizMode
