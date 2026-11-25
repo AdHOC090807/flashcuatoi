@@ -19,6 +19,7 @@
 - **Lessons (`Bài 1..50`)**: Group Japanese vocabulary by lesson with per-lesson progress bars and a **"Study lessons X to Y"** combined queue.
 - **SM-2 Spaced Repetition**: Pure deterministic SM-2 scheduler managing ease factor, intervals, repetitions, lapses, and daily New / Learning / Due queues.
 - **Statistics & Gamification**: Recharts daily activity & retention curve, 12-week study heatmap, hardest cards list, per-deck mastery progress, daily streak, SVG goal ring, XP, and achievement badges.
+- **Quick Import by Paste (`/import/paste`)**: Click **"Paste to create / Dán để tạo bộ thẻ"** on the Decks or Deck Detail pages to paste raw vocabulary lists, CSV/TSV, JSON (`zod`-validated), Anki plain-text exports (with HTML tag cleanup), or Markdown tables. Includes auto-detected formats & separators, 300ms debounced inline preview (virtualized for >200 rows), smart Japanese Kana/Romaji/Kanji mapping via `wanakana`, optional AI auto-fill, atomic Dexie transactions, and 30-second Undo toast + import history.
 - **Import / Export & Backup**: Drag-and-drop CSV, Anki TSV, and JSON importer with live preview, Anki Japanese presets, column mapping, duplicate strategies, CSV/TSV export, and full JSON backup/restore (backward-compatible with v1 backups).
 - **Bilingual, Accessible & Offline-First**: English & Vietnamese (`react-i18next`), Light/Dark/System themes, self-hosted Noto Sans JP (`@fontsource/noto-sans-jp`), `lang="ja"` markup, WCAG AA contrast, and PWA (`vite-plugin-pwa`).
 - **Optional AI Assist**: Disabled by default; stores an OpenAI-compatible API key strictly locally in IndexedDB to auto-fill card fields when enabled.
@@ -80,6 +81,19 @@ Each card tracks `easeFactor` (default `2.5`, minimum `1.3`), `interval` (days),
 4. **Easy (`4`)**: Accelerated progression (`4d` → `8d` → `interval × easeFactor × 1.3`) and increases ease factor by `+0.15`.
 
 Daily study queues prioritize due **Learning** cards, then due **Review** cards, followed by **New** cards capped by your configurable `dailyNewLimit`.
+
+## Quick Import by Paste
+
+Open the **Paste to create / Dán để tạo bộ thẻ** dialog from the **Decks** or **Deck Detail** page, or visit `/import/paste` directly:
+
+1. **Auto-detected formats**:
+   - **Simple lines**: `term - meaning` (auto-detects `\t`, `" - "`, `" = "`, `;`, `|`, `,`, `:`; splits on the first separator only; start line 1 with `# Deck Name` to auto-name a new deck).
+   - **CSV / TSV**: Header-mapped (`term`, `meaning`, `kana`, `romaji`, `kanji`, `example`, `translation`, `wordType`, `lesson`, `tags`) with quoted commas, escaped quotes, and multi-line cells (`papaparse`).
+   - **JSON**: Card array or `{ name, language, cards: [...] }` validated via `zod` with exact path errors (e.g. `cards[3].meaning`).
+   - **Anki Plain Text**: Supports `#separator:tab` / `#columns:` / `#deck:` headers, converts `<br>` to newlines, strips HTML tags, and decodes HTML entities safely.
+   - **Markdown Tables**: Parses `| col1 | col2 |` tables automatically.
+2. **Japanese Smart Parsing (`ja`)**: Auto-generates Romaji with `wanakana`, converts Romaji-only terms into Hiragana, preserves Kanji in the optional field, and warns when Kanji is missing a Kana reading.
+3. **Preview, Transactions & Undo**: Edit cells inline, remap columns, swap `term ↔ meaning`, apply batch Lesson/Tags, save up to 5,000+ cards in a single all-or-nothing Dexie transaction, and undo any import for 30s from the toast or anytime via **Import history**.
 
 ## Roadmap
 
