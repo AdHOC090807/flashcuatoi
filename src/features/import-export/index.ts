@@ -1,7 +1,16 @@
 import { db } from '@/db';
 import { bulkCreateCards, createDeck } from '@/db/actions';
+import { kanaToRomaji } from '@/features/japanese';
 import { createInitialSRSFields } from '@/features/srs/sm2';
-import type { Card, Deck, FullBackupPayload, ReviewLog, UserSettings } from '@/types';
+import type {
+  Card,
+  Deck,
+  DeckLanguage,
+  FullBackupPayload,
+  ReviewLog,
+  UserSettings,
+  VerbForms,
+} from '@/types';
 
 export type ImportFormat = 'csv' | 'tsv' | 'json';
 
@@ -14,7 +23,16 @@ export type MappableField =
   | 'example'
   | 'exampleTranslation'
   | 'notes'
-  | 'tags';
+  | 'tags'
+  | 'kana'
+  | 'romaji'
+  | 'kanji'
+  | 'wordType'
+  | 'lesson'
+  | 'masu'
+  | 'te'
+  | 'ta'
+  | 'nai';
 
 export interface ParsedImportTable {
   format: ImportFormat;
@@ -32,6 +50,15 @@ const FIELD_ALIASES: Record<Exclude<MappableField, 'ignore'>, string[]> = {
   exampleTranslation: ['exampletranslation', 'example_translation', 'dich vi du', 'dịch ví dụ'],
   notes: ['notes', 'note', 'ghi chu', 'ghi chú'],
   tags: ['tags', 'tag', 'label', 'labels'],
+  kana: ['kana', 'hiragana', 'katakana', 'reading', 'furigana'],
+  romaji: ['romaji', 'romanji', 'latin'],
+  kanji: ['kanji', 'hanzi', 'han tu', 'hán tự'],
+  wordType: ['wordtype', 'word_type', 'jlpt_pos', 'loai tu', 'loại từ'],
+  lesson: ['lesson', 'bai', 'bài', 'unit', 'chapter'],
+  masu: ['masu', 'masuform', 'masu_form'],
+  te: ['te', 'teform', 'te_form'],
+  ta: ['ta', 'taform', 'ta_form'],
+  nai: ['nai', 'naiform', 'nai_form'],
 };
 
 function guessField(header: string, colIndex: number): MappableField {
@@ -49,6 +76,25 @@ function guessField(header: string, colIndex: number): MappableField {
   if (colIndex === 2) return 'phonetic';
   if (colIndex === 3) return 'example';
   return 'ignore';
+}
+
+export function buildJapanesePresetMapping(
+  columnCount: number,
+  preset: 'anki_ja_basic' | 'anki_ja_full'
+): MappableField[] {
+  const basicOrder: MappableField[] = ['kana', 'romaji', 'meaning', 'lesson', 'kanji', 'notes'];
+  const fullOrder: MappableField[] = [
+    'kana',
+    'kanji',
+    'romaji',
+    'meaning',
+    'wordType',
+    'lesson',
+    'example',
+    'exampleTranslation',
+  ];
+  const template = preset === 'anki_ja_basic' ? basicOrder : fullOrder;
+  return Array.from({ length: columnCount }, (_, i) => template[i] ?? 'ignore');
 }
 
 export function parseDelimitedText(text: string, delimiter: ',' | '\t'): string[][] {
@@ -117,24 +163,28 @@ export function parseImportFile(filename: string, content: string): ParsedImport
       return { format: 'json', headers: [], rows: [], suggestedMapping: [] };
     }
 
+    const allowedKeys = [
+      'term',
+      'meaning',
+      'phonetic',
+      'partOfSpeech',
+      'example',
+      'exampleTranslation',
+      'notes',
+      'tags',
+      'front',
+      'back',
+      'kana',
+      'romaji',
+      'kanji',
+      'wordType',
+      'lesson',
+    ];
     const keySet = new Set<string>();
     records.forEach((r) => {
       if (r && typeof r === 'object') {
         Object.keys(r).forEach((k) => {
-          if (
-            [
-              'term',
-              'meaning',
-              'phonetic',
-              'partOfSpeech',
-              'example',
-              'exampleTranslation',
-              'notes',
-              'tags',
-              'front',
-              'back',
-            ].includes(k)
-          ) {
+          if (allowedKeys.includes(k)) {
             keySet.add(k);
           }
         });
@@ -172,7 +222,20 @@ export function parseImportFile(filename: string, content: string): ParsedImport
   const firstRow = rawRows[0];
   const looksLikeHeader = firstRow.some((cell) => {
     const c = cell.trim().toLowerCase();
-    return ['term', 'word', 'front', 'meaning', 'back', 'phonetic', 'ipa', 'example'].includes(c);
+    return [
+      'term',
+      'word',
+      'front',
+      'meaning',
+      'back',
+      'phonetic',
+      'ipa',
+      'example',
+      'kana',
+      'romaji',
+      'kanji',
+      'lesson',
+    ].includes(c);
   });
 
   const headers = looksLikeHeader ? firstRow : firstRow.map((_, idx) => `Column ${idx + 1}`);
@@ -202,6 +265,12 @@ export async function commitMappedImport(
       exampleTranslation: string;
       notes: string;
       tags: string[];
+      kana?: string;
+      romaji?: string;
+      kanji?: string;
+      wordType?: string;
+      lesson?: number;
+      verbForms?: VerbForms;
     } = {
       term: '',
       meaning: '',
@@ -213,6 +282,8 @@ export async function commitMappedImport(
       tags: [],
     };
 
+    const verbForms: VerbForms = {};
+
     mapping.forEach((field, idx) => {
       const value = (row[idx] ?? '').trim();
       if (!value || field === 'ignore') return;
@@ -221,10 +292,31 @@ export async function commitMappedImport(
           .split(/[;,]/)
           .map((t) => t.trim())
           .filter(Boolean);
+      } else if (field === 'lesson') {
+        const num = Number(value.replace(/[^\d]/g, ''));
+        if (num > 0) obj.lesson = Math.min(50, num);
+      } else if (field === 'masu' || field === 'te' || field === 'ta' || field === 'nai') {
+        verbForms[field] = value;
       } else {
         obj[field] = value;
       }
     });
+
+    if (obj.kana && !obj.term) {
+      obj.term = obj.kana;
+    }
+    if (obj.kana && !obj.romaji) {
+      obj.romaji = kanaToRomaji(obj.kana);
+    }
+    if (obj.romaji && !obj.phonetic) {
+      obj.phonetic = obj.romaji;
+    }
+    if (obj.wordType && !obj.partOfSpeech) {
+      obj.partOfSpeech = obj.wordType;
+    }
+    if (verbForms.masu || verbForms.te || verbForms.ta || verbForms.nai) {
+      obj.verbForms = verbForms;
+    }
 
     return obj;
   });
@@ -249,6 +341,11 @@ export function exportCardsToCSV(cards: Card[]): string {
     'exampleTranslation',
     'notes',
     'tags',
+    'kana',
+    'romaji',
+    'kanji',
+    'wordType',
+    'lesson',
   ];
   const lines = [
     headers.join(','),
@@ -262,6 +359,11 @@ export function exportCardsToCSV(cards: Card[]): string {
         c.exampleTranslation,
         c.notes,
         c.tags.join('; '),
+        c.kana ?? '',
+        c.romaji ?? '',
+        c.kanji ?? '',
+        c.wordType ?? '',
+        c.lesson ? String(c.lesson) : '',
       ]
         .map(escapeCsvCell)
         .join(',')
@@ -274,13 +376,15 @@ export function exportCardsToAnkiTSV(cards: Card[]): string {
   return cards
     .map((c) =>
       [
-        c.term,
+        c.kana || c.term,
         c.meaning,
-        c.phonetic,
-        c.partOfSpeech,
+        c.romaji || c.phonetic,
+        c.wordType || c.partOfSpeech,
         c.example,
         c.exampleTranslation,
         c.notes,
+        c.lesson ? String(c.lesson) : '',
+        c.kanji ?? '',
         c.tags.join(' '),
       ]
         .map((v) => v.replace(/\t/g, ' ').replace(/\r?\n/g, '<br>'))
@@ -297,13 +401,12 @@ export async function exportFullBackup(): Promise<FullBackupPayload> {
     db.settings.get('default'),
   ]);
 
-  // Strip sensitive API key before backup export
   const safeSettings: Partial<UserSettings> | undefined = settings
     ? { ...settings, aiApiKey: '' }
     : undefined;
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     decks,
     cards,
@@ -329,7 +432,8 @@ export async function restoreFullBackup(payload: FullBackupPayload): Promise<{
     name: d.name || 'Imported Deck',
     description: d.description ?? '',
     color: d.color || '#4f46e5',
-    emoji: d.emoji || '📚',
+    emoji: d.emoji || (d.language === 'ja' ? '🇯🇵' : '📚'),
+    language: d.language === 'ja' ? 'ja' : 'en',
     tags: Array.isArray(d.tags) ? d.tags : [],
     createdAt: d.createdAt ?? now,
     updatedAt: d.updatedAt ?? now,
@@ -358,8 +462,10 @@ export async function restoreFullBackup(payload: FullBackupPayload): Promise<{
         await db.settings.put({
           ...current,
           ...payload.settings,
+          showKanji: payload.settings.showKanji ?? current.showKanji ?? false,
+          ttsAutoplay: payload.settings.ttsAutoplay ?? current.ttsAutoplay ?? false,
           id: 'default',
-          aiApiKey: current.aiApiKey, // preserve local API key
+          aiApiKey: current.aiApiKey,
         });
       }
     }
@@ -372,12 +478,17 @@ export async function restoreFullBackup(payload: FullBackupPayload): Promise<{
   };
 }
 
-export async function ensureTargetDeck(deckId: string, newDeckName?: string): Promise<string> {
+export async function ensureTargetDeck(
+  deckId: string,
+  newDeckName?: string,
+  language: DeckLanguage = 'en'
+): Promise<string> {
   if (deckId !== '__new__') return deckId;
   const created = await createDeck({
     name: newDeckName?.trim() || 'Imported Vocabulary',
-    emoji: '📥',
-    color: '#0ea5e9',
+    emoji: language === 'ja' ? '🇯🇵' : '📥',
+    color: language === 'ja' ? '#ec4899' : '#0ea5e9',
+    language,
     description: 'Imported deck',
   });
   return created.id;

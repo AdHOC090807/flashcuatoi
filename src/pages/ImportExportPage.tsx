@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
-import { Download, FileUp, UploadCloud } from 'lucide-react';
+import { Download, FileUp, Sparkles, UploadCloud } from 'lucide-react';
 import { db } from '@/db';
 import {
+  buildJapanesePresetMapping,
   commitMappedImport,
   ensureTargetDeck,
   exportCardsToAnkiTSV,
@@ -19,6 +20,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import type { DeckLanguage } from '@/types';
 
 const MAPPABLE_FIELDS: MappableField[] = [
   'ignore',
@@ -30,6 +32,15 @@ const MAPPABLE_FIELDS: MappableField[] = [
   'exampleTranslation',
   'notes',
   'tags',
+  'kana',
+  'romaji',
+  'kanji',
+  'wordType',
+  'lesson',
+  'masu',
+  'te',
+  'ta',
+  'nai',
 ];
 
 function downloadBlob(filename: string, content: string, mime: string) {
@@ -52,6 +63,7 @@ export function ImportExportPage() {
   const [mapping, setMapping] = useState<MappableField[]>([]);
   const [targetDeckId, setTargetDeckId] = useState<string>('__new__');
   const [newDeckName, setNewDeckName] = useState('Imported Vocabulary');
+  const [newDeckLanguage, setNewDeckLanguage] = useState<DeckLanguage>('en');
   const [dupStrategy, setDupStrategy] = useState<'skip' | 'update' | 'keep'>('skip');
   const [exportDeckId, setExportDeckId] = useState<string>('all');
 
@@ -81,6 +93,9 @@ export function ImportExportPage() {
       }
       setParsed(table);
       setMapping(table.suggestedMapping);
+      if (table.suggestedMapping.includes('kana')) {
+        setNewDeckLanguage('ja');
+      }
       if (decks[0]?.id && targetDeckId === '__new__') {
         setTargetDeckId(decks[0].id);
       }
@@ -93,9 +108,19 @@ export function ImportExportPage() {
     }
   };
 
+  const applyPreset = (preset: 'anki_ja_basic' | 'anki_ja_full') => {
+    if (!parsed) return;
+    setMapping(buildJapanesePresetMapping(parsed.headers.length, preset));
+    setNewDeckLanguage('ja');
+    const jaDeck = decks.find((d) => d.language === 'ja');
+    if (jaDeck && targetDeckId === '__new__') {
+      setTargetDeckId(jaDeck.id);
+    }
+  };
+
   const handleCommitImport = async () => {
     if (!parsed) return;
-    const resolvedDeckId = await ensureTargetDeck(targetDeckId, newDeckName);
+    const resolvedDeckId = await ensureTargetDeck(targetDeckId, newDeckName, newDeckLanguage);
     const res = await commitMappedImport(resolvedDeckId, parsed.rows, mapping, dupStrategy);
     pushToast({
       title: t('importExport.importNow'),
@@ -216,14 +241,35 @@ export function ImportExportPage() {
       {/* Preview & Column Mapping */}
       {parsed && (
         <Card>
-          <CardHeader>
+          <CardHeader className="space-y-3">
             <CardTitle>
               {t('importExport.preview')} —{' '}
               {t('importExport.rowsFound', { count: parsed.rows.length })}
             </CardTitle>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPreset('anki_ja_basic')}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>{t('japanese.presetBasic')}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset('anki_ja_full')}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>{t('japanese.presetFull')}</span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
               <div>
                 <label className="mb-1 block text-xs font-medium">
                   {t('importExport.targetDeck')}
@@ -243,12 +289,25 @@ export function ImportExportPage() {
               </div>
 
               {targetDeckId === '__new__' && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium">
-                    {t('importExport.newDeckName')}
-                  </label>
-                  <Input value={newDeckName} onChange={(e) => setNewDeckName(e.target.value)} />
-                </div>
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      {t('importExport.newDeckName')}
+                    </label>
+                    <Input value={newDeckName} onChange={(e) => setNewDeckName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">{t('decks.language')}</label>
+                    <select
+                      value={newDeckLanguage}
+                      onChange={(e) => setNewDeckLanguage(e.target.value as DeckLanguage)}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="en">{t('decks.langEn')}</option>
+                      <option value="ja">{t('decks.langJa')}</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               <div>
