@@ -158,8 +158,8 @@ export function SettingsPage() {
             </label>
             <Switch
               id="pref-tts-autoplay"
-              checked={Boolean(settings.ttsAutoplay)}
-              onCheckedChange={(v) => void updateSettings({ ttsAutoplay: v })}
+              checked={Boolean(settings.autoReadOnArrival ?? settings.ttsAutoplay ?? true)}
+              onCheckedChange={(v) => void updateSettings({ autoReadOnArrival: v, ttsAutoplay: v })}
               aria-label={t('settings.ttsAutoplay')}
             />
           </div>

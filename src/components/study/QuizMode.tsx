@@ -42,10 +42,10 @@ export function QuizMode({
 
   useEffect(() => {
     setSelectedId(null);
-    if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
+    if (ttsAutoplay || direction === 'listen_to_term') {
       debouncedPlayTTS(spokenTerm, {
         voiceURI: settings?.ttsVoiceURI,
-        lang: 'ja-JP',
+        lang: ttsLang,
         rate: settings?.ttsRate ?? 1.0,
         audioUrl: card.audioUrl,
         provider: resolveTTSProvider(settings),

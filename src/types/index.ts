@@ -100,6 +100,7 @@ export interface UserSettings {
   ttsLang: string;
   ttsRate: number;
   ttsAutoplay: boolean;
+  autoReadOnArrival?: boolean;
   ttsProvider?: TTSProviderType;
   elevenLabsApiKey?: string;
   elevenLabsVoiceId?: string;

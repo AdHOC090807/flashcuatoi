@@ -386,6 +386,11 @@ export async function playTTS(text: string, options: TTSOptions = {}): Promise<T
       return { usedProvider: 'none', fallbackUsed: false };
     }
 
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      options.onStatusChange?.('idle');
+      return { usedProvider: 'none', fallbackUsed: false };
+    }
+
     const reason = err instanceof Error ? err.message : 'TTS proxy unavailable';
     useToastStore.getState().pushToast({
       title: 'Audio fallback',

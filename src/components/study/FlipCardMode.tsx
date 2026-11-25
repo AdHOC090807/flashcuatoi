@@ -219,6 +219,7 @@ export function FlipCardMode({
   const containerRef = useRef<HTMLDivElement>(null);
   const commandSeqRef = useRef(0);
   const hadInteractionRef = useRef(false);
+  const lastSpokenCardKeyRef = useRef<string | null>(null);
 
   const [flipped, setFlipped] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -242,6 +243,7 @@ export function FlipCardMode({
     setLockedNotice(false);
     setIsAnimating(false);
     setSwipeCommand(null);
+    lastSpokenCardKeyRef.current = null;
 
     if (hadInteractionRef.current && containerRef.current) {
       const container = containerRef.current;
@@ -253,24 +255,30 @@ export function FlipCardMode({
       });
     }
 
-    if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
-      debouncedPlayTTS(spokenTerm, {
-        voiceURI: settings?.ttsVoiceURI,
-        lang: 'ja-JP',
-        rate: settings?.ttsRate ?? 1.0,
-        audioUrl: card.audioUrl,
-        provider: resolveTTSProvider(settings),
-        elevenLabsApiKey: settings?.elevenLabsApiKey,
-        elevenLabsVoiceId: settings?.elevenLabsVoiceId,
-        elevenLabsModel: settings?.elevenLabsModel,
-      });
-    }
-
     return () => {
       stopSpeaking();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedActiveKey, card.id]);
+
+  // Auto-read whenever arriving at a card (works for both EN & JA decks)
+  useEffect(() => {
+    const shouldAutoRead = Boolean(ttsAutoplay || direction === 'listen_to_term');
+    if (!shouldAutoRead) return;
+    if (lastSpokenCardKeyRef.current === resolvedActiveKey) return;
+    lastSpokenCardKeyRef.current = resolvedActiveKey;
+
+    debouncedPlayTTS(spokenTerm, {
+      voiceURI: settings?.ttsVoiceURI,
+      lang: ttsLang,
+      rate: settings?.ttsRate ?? 1.0,
+      audioUrl: card.audioUrl,
+      provider: resolveTTSProvider(settings),
+      elevenLabsApiKey: settings?.elevenLabsApiKey,
+      elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+      elevenLabsModel: settings?.elevenLabsModel,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedActiveKey, card.id, ttsAutoplay, direction, ttsLang]);
 
   const toggleFlip = useCallback(() => {
     hadInteractionRef.current = true;
@@ -475,52 +483,57 @@ export function FlipCardMode({
         </p>
       )}
 
-      {/* Flip / Undo / Navigation Action Row */}
-      <div className="flex items-center justify-between gap-2.5">
-        {swipeEnabled ? (
-          <Button
-            variant="outline"
-            size="md"
-            disabled={!canUndo || isAnimating}
-            onClick={() => {
-              hadInteractionRef.current = true;
-              onUndo?.();
-            }}
-            title={t('study.undoHint')}
-            aria-label={t('study.undoHint')}
-          >
-            <RotateCcw className="h-4 w-4" />
-            <span>{t('study.undo')}</span>
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={!canGoPrev || isAnimating}
-            onClick={onPrev}
-            aria-label={t('common.previous')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-
-        <Button size="lg" className="flex-1 max-w-xs" disabled={isAnimating} onClick={toggleFlip}>
-          {flipped ? t('study.hideAnswer') : t('study.showAnswer')}
+      {/* Flip / Previous / Next / Undo Action Row */}
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={!canGoPrev || isAnimating}
+          onClick={() => {
+            hadInteractionRef.current = true;
+            onPrev();
+          }}
+          aria-label={t('common.previous')}
+        >
+          <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {!swipeEnabled ? (
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={!canGoNext || isAnimating}
-            onClick={onNext}
-            aria-label={t('common.next')}
-          >
-            <ChevronRight className="h-4 w-4" />
+        <div className="flex flex-1 items-center justify-center gap-2 min-w-0">
+          {swipeEnabled && (
+            <Button
+              variant="outline"
+              size="md"
+              disabled={!canUndo || isAnimating}
+              onClick={() => {
+                hadInteractionRef.current = true;
+                onUndo?.();
+              }}
+              title={t('study.undoHint')}
+              aria-label={t('study.undoHint')}
+              className="shrink-0 px-2.5 sm:px-3"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('study.undo')}</span>
+            </Button>
+          )}
+
+          <Button size="lg" className="flex-1 max-w-xs" disabled={isAnimating} onClick={toggleFlip}>
+            {flipped ? t('study.hideAnswer') : t('study.showAnswer')}
           </Button>
-        ) : (
-          <div className="hidden w-[92px] sm:block" aria-hidden="true" />
-        )}
+        </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={!canGoNext || isAnimating}
+          onClick={() => {
+            hadInteractionRef.current = true;
+            onNext();
+          }}
+          aria-label={t('common.next')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Rating Buttons (always reachable as click fallback, trigger animated swipe when enabled) */}

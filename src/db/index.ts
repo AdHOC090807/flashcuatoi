@@ -90,6 +90,24 @@ export class LexiCardsDatabase extends Dexie {
             if (setting.hapticsEnabled === undefined) setting.hapticsEnabled = true;
           });
       });
+
+    this.version(5)
+      .stores({
+        decks: 'id, name, language, createdAt, updatedAt, *tags',
+        cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
+        reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
+        settings: 'id',
+        ttsCache: 'key, createdAt',
+        importHistory: 'id, deckId, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((setting: Partial<UserSettings>) => {
+            if (setting.autoReadOnArrival === undefined) setting.autoReadOnArrival = true;
+          });
+      });
   }
 }
 
@@ -104,7 +122,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   ttsVoiceURI: '',
   ttsLang: 'en-US',
   ttsRate: 1.0,
-  ttsAutoplay: false,
+  ttsAutoplay: true,
+  autoReadOnArrival: true,
   ttsProvider: getDefaultTTSProvider(),
   elevenLabsApiKey: '',
   elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',

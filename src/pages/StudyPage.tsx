@@ -70,7 +70,7 @@ export function StudyPage() {
 
   const isJapanese = deck?.language === 'ja';
   const showKanji = Boolean(settings?.showKanji);
-  const ttsAutoplay = Boolean(settings?.ttsAutoplay);
+  const ttsAutoplay = Boolean(settings?.autoReadOnArrival ?? settings?.ttsAutoplay ?? true);
 
   const [direction, setDirection] = useState<StudyDirection>('term_to_meaning');
   const [sessionQueue, setSessionQueue] = useState<Card[] | null>(null);
@@ -367,39 +367,48 @@ export function StudyPage() {
         </div>
       </div>
 
-      {/* Japanese study direction & autoplay controls */}
-      {isJapanese && ['flip', 'quiz', 'typing'].includes(mode) && (
+      {/* Study direction (JA) & auto-read controls */}
+      {['flip', 'quiz', 'typing'].includes(mode) && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-medium text-muted-foreground">{t('japanese.direction')}:</span>
-            {(
-              [
-                { id: 'term_to_meaning', label: t('japanese.dirKanaToVi') },
-                { id: 'meaning_to_term', label: t('japanese.dirViToKana') },
-                { id: 'listen_to_term', label: t('japanese.dirListenToKana') },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setDirection(opt.id)}
-                className={cn(
-                  'rounded-md px-2.5 py-1 font-medium transition',
-                  direction === opt.id
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground hover:bg-accent'
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {isJapanese ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-medium text-muted-foreground">{t('japanese.direction')}:</span>
+              {(
+                [
+                  { id: 'term_to_meaning', label: t('japanese.dirKanaToVi') },
+                  { id: 'meaning_to_term', label: t('japanese.dirViToKana') },
+                  { id: 'listen_to_term', label: t('japanese.dirListenToKana') },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDirection(opt.id)}
+                  className={cn(
+                    'rounded-md px-2.5 py-1 font-medium transition',
+                    direction === opt.id
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-accent'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">{t('settings.ttsAutoplay')}</span>
+          )}
 
           <Button
             size="sm"
             variant={ttsAutoplay ? 'default' : 'outline'}
-            onClick={() => void updateSettings({ ttsAutoplay: !ttsAutoplay })}
-            className="h-7 px-2.5 text-xs"
+            onClick={() =>
+              void updateSettings({
+                autoReadOnArrival: !ttsAutoplay,
+                ttsAutoplay: !ttsAutoplay,
+              })
+            }
+            className="ml-auto h-7 px-2.5 text-xs"
           >
             <Volume2 className="h-3.5 w-3.5" />
             <span>{t('japanese.autoplay')}</span>
@@ -494,8 +503,16 @@ export function StudyPage() {
           canGoNext={currentIndex + 1 < sessionQueue.length}
           canUndo={undoStack.length > 0}
           enteringFromDirection={enteringFromDirection}
-          onPrev={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-          onNext={() => setCurrentIndex((i) => Math.min(sessionQueue.length - 1, i + 1))}
+          onPrev={() => {
+            setEnteringFromDirection(null);
+            cardShownAtRef.current = Date.now();
+            setCurrentIndex((i) => Math.max(0, i - 1));
+          }}
+          onNext={() => {
+            setEnteringFromDirection(null);
+            cardShownAtRef.current = Date.now();
+            setCurrentIndex((i) => Math.min(sessionQueue.length - 1, i + 1));
+          }}
           onRate={(r, dir) => void handleRateOrAnswer(r, undefined, dir)}
           onUndo={() => void handleUndo()}
         />

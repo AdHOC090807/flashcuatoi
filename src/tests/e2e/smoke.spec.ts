@@ -205,6 +205,13 @@ test.describe('LexiCards smoke tests', () => {
     await page.getByRole('button', { name: /Undo/ }).click();
     await expect(page.getByText('1 / 20')).toBeVisible();
 
+    // Previous / Next buttons remain available and Autoplay toggle is visible on English decks too
+    await expect(page.getByRole('button', { name: 'Autoplay' })).toBeVisible();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('2 / 20')).toBeVisible();
+    await page.getByRole('button', { name: 'Previous', exact: true }).click();
+    await expect(page.getByText('1 / 20')).toBeVisible();
+
     const longTasks = await page.evaluate(
       () => (window as unknown as { __longTaskCount: number }).__longTaskCount
     );

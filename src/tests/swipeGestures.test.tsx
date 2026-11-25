@@ -4,6 +4,7 @@ import '@/i18n';
 import { db, getOrCreateSettings } from '@/db';
 import { recordCardReview, undoCardReview, updateSettings } from '@/db/actions';
 import { createInitialSRSFields } from '@/features/srs/sm2';
+import * as tts from '@/features/tts';
 import {
   computeBadgeOpacities,
   computeDragRotation,
@@ -304,5 +305,62 @@ describe('SwipeableCard + FlipCardMode + Undo integration', () => {
       const stored = await db.settings.get('default');
       expect(stored?.swipeThreshold).toBe(60);
     });
+  });
+
+  it('keeps Previous & Next buttons available alongside swipe and auto-reads on card arrival', async () => {
+    const autoReadSpy = vi.spyOn(tts, 'debouncedPlayTTS').mockImplementation(() => {});
+    const onPrev = vi.fn();
+    const onNext = vi.fn();
+    const card1 = makeSampleCard({ id: 'c1', term: 'resilient' });
+    const card2 = makeSampleCard({ id: 'c2', term: 'pragmatic' });
+
+    const { rerender } = render(
+      <FlipCardMode
+        card={card1}
+        upcomingCards={[card2]}
+        canGoPrev={false}
+        canGoNext={true}
+        ttsAutoplay={true}
+        onPrev={onPrev}
+        onNext={onNext}
+        onRate={vi.fn()}
+      />
+    );
+
+    const prevBtn = await screen.findByRole('button', { name: 'Previous' });
+    const nextBtn = await screen.findByRole('button', { name: 'Next' });
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).toBeEnabled();
+
+    expect(autoReadSpy).toHaveBeenCalledWith(
+      'resilient',
+      expect.objectContaining({ lang: 'en-US' })
+    );
+
+    fireEvent.click(nextBtn);
+    expect(onNext).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <FlipCardMode
+        card={card2}
+        upcomingCards={[]}
+        canGoPrev={true}
+        canGoNext={false}
+        ttsAutoplay={true}
+        onPrev={onPrev}
+        onNext={onNext}
+        onRate={vi.fn()}
+      />
+    );
+
+    expect(autoReadSpy).toHaveBeenCalledWith(
+      'pragmatic',
+      expect.objectContaining({ lang: 'en-US' })
+    );
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    expect(onPrev).toHaveBeenCalledTimes(1);
+
+    autoReadSpy.mockRestore();
   });
 });
