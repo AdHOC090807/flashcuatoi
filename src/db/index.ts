@@ -1,11 +1,17 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Card, Deck, ReviewLog, UserSettings } from '@/types';
+import type { Card, Deck, ReviewLog, TTSCacheEntry, TTSProviderType, UserSettings } from '@/types';
+
+export function getDefaultTTSProvider(): TTSProviderType {
+  const proxyUrl = import.meta.env.VITE_TTS_PROXY_URL?.trim();
+  return proxyUrl ? 'proxy' : 'webspeech';
+}
 
 export class LexiCardsDatabase extends Dexie {
   decks!: EntityTable<Deck, 'id'>;
   cards!: EntityTable<Card, 'id'>;
   reviewLogs!: EntityTable<ReviewLog, 'id'>;
   settings!: EntityTable<UserSettings, 'id'>;
+  ttsCache!: EntityTable<TTSCacheEntry, 'key'>;
 
   constructor(name = 'LexiCardsDB') {
     super(name);
@@ -45,6 +51,14 @@ export class LexiCardsDatabase extends Dexie {
             }
           });
       });
+
+    this.version(3).stores({
+      decks: 'id, name, language, createdAt, updatedAt, *tags',
+      cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
+      reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
+      settings: 'id',
+      ttsCache: 'key, createdAt',
+    });
   }
 }
 
@@ -60,6 +74,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
   ttsLang: 'en-US',
   ttsRate: 1.0,
   ttsAutoplay: false,
+  ttsProvider: getDefaultTTSProvider(),
+  elevenLabsApiKey: '',
+  elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
+  elevenLabsModel: 'eleven_multilingual_v2',
   showKanji: false,
   remindersEnabled: false,
   reminderTime: '20:00',

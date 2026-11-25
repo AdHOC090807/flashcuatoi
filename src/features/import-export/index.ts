@@ -402,7 +402,7 @@ export async function exportFullBackup(): Promise<FullBackupPayload> {
   ]);
 
   const safeSettings: Partial<UserSettings> | undefined = settings
-    ? { ...settings, aiApiKey: '' }
+    ? { ...settings, aiApiKey: '', elevenLabsApiKey: '' }
     : undefined;
 
   return {
@@ -466,6 +466,7 @@ export async function restoreFullBackup(payload: FullBackupPayload): Promise<{
           ttsAutoplay: payload.settings.ttsAutoplay ?? current.ttsAutoplay ?? false,
           id: 'default',
           aiApiKey: current.aiApiKey,
+          elevenLabsApiKey: current.elevenLabsApiKey,
         });
       }
     }

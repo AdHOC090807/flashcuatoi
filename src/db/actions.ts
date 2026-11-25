@@ -33,6 +33,7 @@ export interface CardInput {
   exampleTranslation?: string;
   notes?: string;
   imageUrl?: string;
+  audioUrl?: string;
   tags?: string[];
   kana?: string;
   romaji?: string;
@@ -108,6 +109,7 @@ export async function createCard(input: CardInput): Promise<Card> {
     exampleTranslation: (input.exampleTranslation ?? '').trim(),
     notes: (input.notes ?? '').trim(),
     imageUrl: (input.imageUrl ?? '').trim(),
+    audioUrl: input.audioUrl?.trim() || undefined,
     tags: input.tags ?? [],
     kana: kana || undefined,
     romaji: input.romaji?.trim() || undefined,

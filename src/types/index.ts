@@ -12,6 +12,15 @@ export type AppLanguage = 'en' | 'vi';
 
 export type DeckLanguage = 'en' | 'ja';
 
+export type TTSProviderType = 'proxy' | 'webspeech' | 'elevenlabs_byok';
+
+export interface TTSCacheEntry {
+  key: string;
+  mimeType: string;
+  data: ArrayBuffer;
+  createdAt: number;
+}
+
 export type JapaneseWordType =
   'verb' | 'i-adj' | 'na-adj' | 'noun' | 'adverb' | 'particle' | 'expression';
 
@@ -45,6 +54,7 @@ export interface Card {
   exampleTranslation: string;
   notes: string;
   imageUrl: string;
+  audioUrl?: string;
   tags: string[];
   // Optional Japanese-specific fields
   kana?: string;
@@ -88,6 +98,10 @@ export interface UserSettings {
   ttsLang: string;
   ttsRate: number;
   ttsAutoplay: boolean;
+  ttsProvider?: TTSProviderType;
+  elevenLabsApiKey?: string;
+  elevenLabsVoiceId?: string;
+  elevenLabsModel?: string;
   showKanji: boolean;
   remindersEnabled: boolean;
   reminderTime: string; // HH:mm
