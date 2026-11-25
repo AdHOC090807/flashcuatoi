@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeckCard } from '@/components/decks/DeckCard';
 import { DeckFormModal } from '@/components/decks/DeckFormModal';
+import { PasteImportButton } from '@/components/import/PasteImportButton';
 import type { Deck } from '@/types';
 
 type SortOption = 'updated' | 'name' | 'due';
@@ -98,15 +99,18 @@ export function DecksPage() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('decks.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('decks.subtitle')}</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingDeck(null);
-            setModalOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t('decks.newDeck')}</span>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PasteImportButton variant="outline" />
+          <Button
+            onClick={() => {
+              setEditingDeck(null);
+              setModalOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t('decks.newDeck')}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

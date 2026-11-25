@@ -14,6 +14,7 @@ import { DecksPage } from '@/pages/DecksPage';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { StudyPage } from '@/pages/StudyPage';
 import { ImportExportPage } from '@/pages/ImportExportPage';
+import { PasteImportPage } from '@/pages/PasteImportPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { KanaTrainerPage } from '@/pages/KanaTrainerPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -81,6 +82,7 @@ export function App() {
               }
             />
             <Route path="/import-export" element={<ImportExportPage />} />
+            <Route path="/import/paste" element={<PasteImportPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

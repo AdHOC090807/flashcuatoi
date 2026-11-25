@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
-import { Download, FileUp, Sparkles, UploadCloud } from 'lucide-react';
+import { ClipboardPaste, Download, FileUp, Sparkles, UploadCloud } from 'lucide-react';
 import { db } from '@/db';
 import {
   buildJapanesePresetMapping,
@@ -190,9 +191,19 @@ export function ImportExportPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('importExport.title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('importExport.subtitle')}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            {t('importExport.title')}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('importExport.subtitle')}</p>
+        </div>
+        <Link to="/import/paste">
+          <Button variant="outline">
+            <ClipboardPaste className="h-4 w-4" />
+            <span>{t('pasteImport.entryButton')}</span>
+          </Button>
+        </Link>
       </div>
 
       {/* Dropzone */}

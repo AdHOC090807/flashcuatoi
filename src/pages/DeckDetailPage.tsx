@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Card as UiCard, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PasteImportButton } from '@/components/import/PasteImportButton';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TtsButton } from '@/components/cards/TtsButton';
@@ -195,6 +196,7 @@ export function DeckDetailPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <PasteImportButton variant="outline" defaultDeckId={deck.id} />
           <Button variant="outline" onClick={() => setBulkOpen(true)}>
             <ListPlus className="h-4 w-4" />
             <span>{t('cards.bulkAdd')}</span>
