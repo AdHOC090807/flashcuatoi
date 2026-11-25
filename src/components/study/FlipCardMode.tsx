@@ -1,0 +1,180 @@
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { TtsButton } from '@/components/cards/TtsButton';
+import { RatingBar } from '@/components/study/RatingBar';
+import type { Card, ReviewRating } from '@/types';
+import { cn } from '@/lib/utils';
+
+interface FlipCardModeProps {
+  card: Card;
+  canGoPrev: boolean;
+  canGoNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onRate: (rating: ReviewRating) => void;
+}
+
+export function FlipCardMode({
+  card,
+  canGoPrev,
+  canGoNext,
+  onPrev,
+  onNext,
+  onRate,
+}: FlipCardModeProps) {
+  const { t } = useTranslation();
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    setFlipped(false);
+  }, [card.id]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setFlipped((f) => !f);
+      } else if (e.key === 'ArrowLeft' && canGoPrev) {
+        e.preventDefault();
+        onPrev();
+      } else if (e.key === 'ArrowRight' && canGoNext) {
+        e.preventDefault();
+        onNext();
+      } else if (flipped && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        onRate(Number(e.key) as ReviewRating);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [flipped, canGoPrev, canGoNext, onPrev, onNext, onRate]);
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="perspective-1000 h-[340px] sm:h-[380px]">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={
+            flipped ? `${card.term}: ${card.meaning}` : `${card.term}. ${t('study.showAnswer')}`
+          }
+          onClick={() => setFlipped((f) => !f)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              setFlipped((f) => !f);
+            }
+          }}
+          className={cn(
+            'flip-card-inner cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            flipped && 'is-flipped'
+          )}
+        >
+          {/* Front */}
+          <div className="flip-card-face flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-md sm:p-8">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{t(`cards.status.${card.status}`)}</Badge>
+                {card.partOfSpeech && <Badge variant="outline">{card.partOfSpeech}</Badge>}
+              </div>
+              <TtsButton text={card.term} />
+            </div>
+
+            <div className="flex flex-col items-center justify-center text-center">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{card.term}</h2>
+              {card.phonetic && (
+                <p className="mt-2 font-mono text-base text-muted-foreground">{card.phonetic}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <RotateCw className="h-3.5 w-3.5" />
+              <span>{t('study.showAnswer')}</span>
+            </div>
+          </div>
+
+          {/* Back */}
+          <div className="flip-card-face flip-card-back flex flex-col justify-between overflow-y-auto rounded-2xl border border-primary/30 bg-card p-6 shadow-md sm:p-8">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-primary">{card.term}</p>
+                {card.phonetic && (
+                  <p className="font-mono text-xs text-muted-foreground">{card.phonetic}</p>
+                )}
+              </div>
+              <TtsButton text={card.example || card.term} />
+            </div>
+
+            <div className="my-4 space-y-3 text-center">
+              <p className="text-2xl font-bold text-foreground sm:text-3xl">{card.meaning}</p>
+
+              {card.imageUrl && (
+                <img
+                  src={card.imageUrl}
+                  alt={card.term}
+                  className="mx-auto max-h-28 rounded-lg object-cover"
+                />
+              )}
+
+              {card.example && (
+                <div className="mx-auto max-w-lg rounded-xl bg-muted/60 p-3 text-sm">
+                  <p className="italic text-foreground">“{card.example}”</p>
+                  {card.exampleTranslation && (
+                    <p className="mt-1 text-xs text-muted-foreground">{card.exampleTranslation}</p>
+                  )}
+                </div>
+              )}
+
+              {card.notes && <p className="text-xs text-muted-foreground">📝 {card.notes}</p>}
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {card.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[11px]">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {!flipped ? (
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={!canGoPrev}
+            onClick={onPrev}
+            aria-label={t('common.previous')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button size="lg" className="flex-1 max-w-xs" onClick={() => setFlipped(true)}>
+            {t('study.showAnswer')}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={!canGoNext}
+            onClick={onNext}
+            aria-label={t('common.next')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <RatingBar card={card} onRate={onRate} />
+      )}
+
+      <p className="text-center text-xs text-muted-foreground">{t('study.flipHint')}</p>
+    </div>
+  );
+}
