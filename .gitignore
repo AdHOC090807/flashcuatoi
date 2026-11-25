@@ -12,6 +12,9 @@ dist-ssr/
 *.local
 *.tsbuildinfo
 
+# Environment variables
+.env*
+
 # Testing
 coverage/
 playwright-report/
