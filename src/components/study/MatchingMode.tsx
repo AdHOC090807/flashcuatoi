@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { JapaneseTerm } from '@/components/cards/JapaneseTerm';
 import type { Card, ReviewRating } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -9,16 +10,24 @@ interface MatchTile {
   uid: string;
   cardId: string;
   side: 'term' | 'meaning';
-  label: string;
+  card: Card;
 }
 
 interface MatchingModeProps {
   cards: Card[];
+  isJapanese?: boolean;
+  showKanji?: boolean;
   onPairMatched: (card: Card, rating: ReviewRating) => void;
   onComplete: (accuracyPct: number) => void;
 }
 
-export function MatchingMode({ cards, onPairMatched, onComplete }: MatchingModeProps) {
+export function MatchingMode({
+  cards,
+  isJapanese = false,
+  showKanji = false,
+  onPairMatched,
+  onComplete,
+}: MatchingModeProps) {
   const { t } = useTranslation();
   const roundCards = useMemo(() => cards.slice(0, 6), [cards]);
 
@@ -27,13 +36,13 @@ export function MatchingMode({ cards, onPairMatched, onComplete }: MatchingModeP
       uid: `term_${c.id}`,
       cardId: c.id,
       side: 'term',
-      label: c.term,
+      card: c,
     }));
     const meanings: MatchTile[] = roundCards.map((c) => ({
       uid: `meaning_${c.id}`,
       cardId: c.id,
       side: 'meaning',
-      label: c.meaning,
+      card: c,
     }));
     return [...terms, ...meanings].sort(() => Math.random() - 0.5);
   }, [roundCards]);
@@ -130,7 +139,11 @@ export function MatchingMode({ cards, onPairMatched, onComplete }: MatchingModeP
                   'bg-card hover:border-primary/60 hover:bg-accent/50'
               )}
             >
-              <span>{tile.label}</span>
+              {tile.side === 'term' && isJapanese ? (
+                <JapaneseTerm card={tile.card} showKanji={showKanji} />
+              ) : (
+                <span>{tile.side === 'term' ? tile.card.term : tile.card.meaning}</span>
+              )}
             </button>
           );
         })}

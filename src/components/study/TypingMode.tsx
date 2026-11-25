@@ -1,20 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { db } from '@/db';
+import { getDisplayKana, isJapaneseMatch } from '@/features/japanese';
+import { speakText } from '@/features/tts';
+import { isTolerantMatch } from '@/lib/utils';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TtsButton } from '@/components/cards/TtsButton';
-import { isTolerantMatch } from '@/lib/utils';
-import type { Card, ReviewRating } from '@/types';
+import { JapaneseTerm } from '@/components/cards/JapaneseTerm';
+import type { Card, ReviewRating, StudyDirection } from '@/types';
 
 interface TypingModeProps {
   card: Card;
+  isJapanese?: boolean;
+  showKanji?: boolean;
+  direction?: StudyDirection;
+  ttsAutoplay?: boolean;
   onAnswered: (rating: ReviewRating, correct: boolean) => void;
 }
 
-export function TypingMode({ card, onAnswered }: TypingModeProps) {
+export function TypingMode({
+  card,
+  isJapanese = false,
+  showKanji = false,
+  direction = 'meaning_to_term',
+  ttsAutoplay = false,
+  onAnswered,
+}: TypingModeProps) {
   const { t } = useTranslation();
+  const settings = useLiveQuery(() => db.settings.get('default'));
   const [answer, setAnswer] = useState('');
   const [checked, setChecked] = useState<{
     isMatch: boolean;
@@ -22,17 +39,36 @@ export function TypingMode({ card, onAnswered }: TypingModeProps) {
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const ttsLang = isJapanese ? 'ja-JP' : settings?.ttsLang || 'en-US';
+  const spokenTerm = isJapanese ? getDisplayKana(card) : card.term;
+  const expectMeaning = isJapanese && direction === 'term_to_meaning';
+
   useEffect(() => {
     setAnswer('');
     setChecked(null);
     inputRef.current?.focus();
-  }, [card.id]);
+    if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
+      speakText(spokenTerm, {
+        voiceURI: settings?.ttsVoiceURI,
+        lang: 'ja-JP',
+        rate: settings?.ttsRate ?? 1.0,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.id, direction]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!answer.trim() || checked) return;
 
-    const result = isTolerantMatch(answer, card.term);
+    if (isJapanese && !expectMeaning) {
+      const res = isJapaneseMatch(answer, card);
+      setChecked({ isMatch: res.isMatch, isExact: res.isExact });
+      return;
+    }
+
+    const expectedText = expectMeaning ? card.meaning : card.term;
+    const result = isTolerantMatch(answer, expectedText);
     setChecked({ isMatch: result.isMatch, isExact: result.isExact });
   };
 
@@ -42,21 +78,39 @@ export function TypingMode({ card, onAnswered }: TypingModeProps) {
     onAnswered(rating, checked.isMatch);
   };
 
+  const expectedLabel = expectMeaning ? card.meaning : spokenTerm;
+
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <UiCard>
         <CardContent className="p-6 text-center sm:p-8">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {t('study.typingPrompt')}
+              {isJapanese && !expectMeaning
+                ? t('japanese.typingKanaOrRomaji')
+                : t('study.typingPrompt')}
             </span>
-            <TtsButton text={card.term} />
+            <TtsButton text={spokenTerm} lang={ttsLang} />
           </div>
-          <h2 className="mt-4 text-2xl font-bold sm:text-3xl">{card.meaning}</h2>
-          {card.partOfSpeech && (
-            <p className="mt-1 text-xs text-muted-foreground">({card.partOfSpeech})</p>
+
+          {expectMeaning ? (
+            <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
+              <JapaneseTerm card={card} showKanji={showKanji} />
+            </h2>
+          ) : isJapanese && direction === 'listen_to_term' ? (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <TtsButton text={spokenTerm} lang="ja-JP" size="lg" label={t('study.listenPlay')} />
+            </div>
+          ) : (
+            <h2 className="mt-4 text-2xl font-bold sm:text-3xl">{card.meaning}</h2>
           )}
-          {card.example && (
+
+          {(card.wordType || card.partOfSpeech) && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              ({card.wordType || card.partOfSpeech})
+            </p>
+          )}
+          {!isJapanese && card.example && (
             <p className="mt-3 text-sm italic text-muted-foreground">
               “{card.example.replace(new RegExp(card.term, 'gi'), '_____')}”
             </p>
@@ -67,10 +121,15 @@ export function TypingMode({ card, onAnswered }: TypingModeProps) {
       <form onSubmit={handleSubmit} className="space-y-3">
         <Input
           ref={inputRef}
+          lang={isJapanese && !expectMeaning ? 'ja' : undefined}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           disabled={Boolean(checked)}
-          placeholder={t('study.typingPlaceholder')}
+          placeholder={
+            isJapanese && !expectMeaning
+              ? t('japanese.typingPlaceholder')
+              : t('study.typingPlaceholder')
+          }
           className="h-12 text-base"
           autoComplete="off"
         />
@@ -99,9 +158,16 @@ export function TypingMode({ card, onAnswered }: TypingModeProps) {
                     ? t('study.exactMatch')
                     : checked.isMatch
                       ? t('study.closeMatch')
-                      : t('study.incorrectAnswer', { expected: card.term })}
+                      : t('study.incorrectAnswer', { expected: expectedLabel })}
                 </p>
-                {card.phonetic && <p className="font-mono text-xs opacity-80">{card.phonetic}</p>}
+                {isJapanese ? (
+                  <p lang="ja" className="text-xs opacity-80 font-jp">
+                    {spokenTerm}
+                    {card.romaji ? ` (${card.romaji})` : ''} — {card.meaning}
+                  </p>
+                ) : (
+                  card.phonetic && <p className="font-mono text-xs opacity-80">{card.phonetic}</p>
+                )}
               </div>
             </div>
             <Button type="button" size="lg" className="w-full" onClick={handleContinue}>

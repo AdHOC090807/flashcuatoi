@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
+import { db } from '@/db';
 import { bulkCreateCards } from '@/db/actions';
+import { kanaToRomaji } from '@/features/japanese';
 import { useToastStore } from '@/store/useToastStore';
 import { Dialog, DialogContent } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +18,8 @@ interface BulkAddModalProps {
 export function BulkAddModal({ open, onOpenChange, deckId }: BulkAddModalProps) {
   const { t } = useTranslation();
   const pushToast = useToastStore((s) => s.pushToast);
+  const deck = useLiveQuery(() => db.decks.get(deckId), [deckId]);
+  const isJapanese = deck?.language === 'ja';
   const [raw, setRaw] = useState('');
   const [dupMode, setDupMode] = useState<'skip' | 'update' | 'keep'>('skip');
 
@@ -27,6 +32,22 @@ export function BulkAddModal({ open, onOpenChange, deckId }: BulkAddModalProps) 
 
     const items = lines.map((line) => {
       const parts = line.split(/[|\t]/).map((p) => p.trim());
+      if (isJapanese) {
+        const kana = parts[0] ?? '';
+        const meaning = parts[1] ?? '';
+        const romaji = parts[2] || kanaToRomaji(kana);
+        const lessonNum = parts[3] ? Number(parts[3]) : undefined;
+        const kanji = parts[4] || undefined;
+        return {
+          term: kana,
+          kana,
+          meaning,
+          romaji,
+          phonetic: romaji,
+          lesson: lessonNum && !Number.isNaN(lessonNum) ? lessonNum : undefined,
+          kanji,
+        };
+      }
       return {
         term: parts[0] ?? '',
         meaning: parts[1] ?? '',
@@ -49,16 +70,19 @@ export function BulkAddModal({ open, onOpenChange, deckId }: BulkAddModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title={t('cards.bulkAdd')}
-        description={t('cards.bulkAddHelp')}
+        description={isJapanese ? t('japanese.bulkAddHelp') : t('cards.bulkAddHelp')}
         className="max-w-xl"
       >
         <form onSubmit={handleImport} className="space-y-4">
           <Textarea
             rows={8}
+            lang={isJapanese ? 'ja' : undefined}
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             placeholder={
-              'resilient | kiên cường | /rɪˈzɪliənt/ | She is resilient.\nempathy | sự đồng cảm | /ˈempəθi/'
+              isJapanese
+                ? 'たべる | ăn | taberu | 2 | 食べる\nのみます | uống | nomimasu | 2'
+                : 'resilient | kiên cường | /rɪˈzɪliənt/ | She is resilient.\nempathy | sự đồng cảm | /ˈempəθi/'
             }
           />
           <div className="flex flex-wrap items-center justify-between gap-2">

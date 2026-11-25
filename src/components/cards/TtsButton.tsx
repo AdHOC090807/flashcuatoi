@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/Button';
 
 export function TtsButton({
   text,
+  lang,
   size = 'icon',
   label,
   className,
 }: {
   text: string;
+  lang?: string;
   size?: 'sm' | 'md' | 'lg' | 'icon';
   label?: string;
   className?: string;
@@ -25,7 +27,7 @@ export function TtsButton({
     e.stopPropagation();
     speakText(text, {
       voiceURI: settings?.ttsVoiceURI,
-      lang: settings?.ttsLang || 'en-US',
+      lang: lang || settings?.ttsLang || 'en-US',
       rate: settings?.ttsRate ?? 1.0,
     });
   };

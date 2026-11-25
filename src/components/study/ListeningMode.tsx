@@ -1,23 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Volume2, XCircle } from 'lucide-react';
+import { CheckCircle2, RotateCcw, Volume2, XCircle } from 'lucide-react';
 import { db } from '@/db';
+import { updateSettings } from '@/db/actions';
+import { buildJapaneseSampleCards, SAMPLE_WORDS } from '@/db/seed';
+import { getDisplayKana, isJapaneseMatch, pickJapaneseQuizDistractors } from '@/features/japanese';
 import { speakText } from '@/features/tts';
-import { SAMPLE_WORDS } from '@/db/seed';
 import { isTolerantMatch, cn } from '@/lib/utils';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { JapaneseTerm } from '@/components/cards/JapaneseTerm';
 import type { Card, ReviewRating } from '@/types';
 
 interface ListeningModeProps {
   card: Card;
   deckCards: Card[];
+  isJapanese?: boolean;
+  showKanji?: boolean;
   onAnswered: (rating: ReviewRating, correct: boolean) => void;
 }
 
-export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProps) {
+export function ListeningMode({
+  card,
+  deckCards,
+  isJapanese = false,
+  showKanji = false,
+  onAnswered,
+}: ListeningModeProps) {
   const { t } = useTranslation();
   const settings = useLiveQuery(() => db.settings.get('default'));
   const [subMode, setSubMode] = useState<'pick' | 'type'>('pick');
@@ -25,11 +36,15 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
   const [typed, setTyped] = useState('');
   const [typedResult, setTypedResult] = useState<boolean | null>(null);
 
+  const ttsLang = isJapanese ? 'ja-JP' : settings?.ttsLang || 'en-US';
+  const spokenText = isJapanese ? getDisplayKana(card) : card.term;
+  const rate = settings?.ttsRate ?? 1.0;
+
   const playAudio = () => {
-    speakText(card.term, {
+    speakText(spokenText, {
       voiceURI: settings?.ttsVoiceURI,
-      lang: settings?.ttsLang || 'en-US',
-      rate: settings?.ttsRate ?? 1.0,
+      lang: ttsLang,
+      rate,
     });
   };
 
@@ -42,27 +57,54 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
   }, [card.id]);
 
   const options = useMemo(() => {
+    if (isJapanese) {
+      let distractors = pickJapaneseQuizDistractors(card, deckCards, 3);
+      if (distractors.length < 3) {
+        const extra = pickJapaneseQuizDistractors(
+          card,
+          buildJapaneseSampleCards(),
+          3 - distractors.length
+        );
+        const used = new Set([card.id, ...distractors.map((d) => d.id)]);
+        for (const ex of extra) {
+          if (!used.has(ex.id) && distractors.length < 3) {
+            distractors = [...distractors, ex];
+            used.add(ex.id);
+          }
+        }
+      }
+      return [
+        { id: card.id, card, isCorrect: true },
+        ...distractors.map((d) => ({ id: d.id, card: d, isCorrect: false })),
+      ].sort(() => Math.random() - 0.5);
+    }
+
     const distractors = deckCards
       .filter((c) => c.id !== card.id && c.meaning.trim() !== card.meaning.trim())
       .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map((c) => ({ id: c.id, text: c.meaning, isCorrect: false }));
+      .slice(0, 3);
 
     if (distractors.length < 3) {
-      const seen = new Set([card.meaning, ...distractors.map((d) => d.text)]);
+      const seen = new Set([card.meaning, ...distractors.map((d) => d.meaning)]);
       for (const sample of SAMPLE_WORDS) {
         if (distractors.length >= 3) break;
         if (!seen.has(sample.meaning)) {
           seen.add(sample.meaning);
-          distractors.push({ id: `fb_${sample.term}`, text: sample.meaning, isCorrect: false });
+          distractors.push({
+            ...card,
+            id: `fb_${sample.term}`,
+            term: sample.term,
+            meaning: sample.meaning,
+          });
         }
       }
     }
 
-    return [{ id: card.id, text: card.meaning, isCorrect: true }, ...distractors].sort(
-      () => Math.random() - 0.5
-    );
-  }, [card, deckCards]);
+    return [
+      { id: card.id, card, isCorrect: true },
+      ...distractors.map((d) => ({ id: d.id, card: d, isCorrect: false })),
+    ].sort(() => Math.random() - 0.5);
+  }, [card, deckCards, isJapanese]);
 
   const handlePick = (opt: { id: string; isCorrect: boolean }) => {
     if (selectedId) return;
@@ -75,7 +117,7 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
   const handleTypeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!typed.trim() || typedResult !== null) return;
-    const res = isTolerantMatch(typed, card.term);
+    const res = isJapanese ? isJapaneseMatch(typed, card) : isTolerantMatch(typed, card.term);
     setTypedResult(res.isMatch);
   };
 
@@ -87,7 +129,7 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
           variant={subMode === 'pick' ? 'default' : 'outline'}
           onClick={() => setSubMode('pick')}
         >
-          {t('study.listenModePick')}
+          {isJapanese ? t('japanese.chooseKana') : t('study.listenModePick')}
         </Button>
         <Button
           size="sm"
@@ -103,15 +145,38 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t('study.listenPrompt')}
           </p>
-          <Button
-            size="lg"
-            onClick={playAudio}
-            className="mt-5 h-16 w-16 rounded-full shadow-md"
-            aria-label={t('study.listenPlay')}
-          >
-            <Volume2 className="h-7 w-7" />
-          </Button>
-          <p className="mt-3 text-xs text-muted-foreground">{t('study.listenPlay')}</p>
+          <div className="mt-5 flex items-center gap-3">
+            <Button
+              size="lg"
+              onClick={playAudio}
+              className="h-16 w-16 rounded-full shadow-md"
+              aria-label={t('study.listenPlay')}
+            >
+              <Volume2 className="h-7 w-7" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={playAudio}
+              aria-label={t('japanese.replayAudio')}
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>{t('japanese.replayAudio')}</span>
+            </Button>
+          </div>
+          <div className="mt-4 flex w-full max-w-xs items-center gap-3 text-xs text-muted-foreground">
+            <span>{rate.toFixed(1)}x</span>
+            <input
+              aria-label={t('settings.ttsRate', { rate: rate.toFixed(1) })}
+              type="range"
+              min={0.5}
+              max={1.5}
+              step={0.1}
+              value={rate}
+              onChange={(e) => void updateSettings({ ttsRate: Number(e.target.value) })}
+              className="flex-1 accent-primary"
+            />
+          </div>
         </CardContent>
       </UiCard>
 
@@ -137,7 +202,13 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
                     'border-rose-500 bg-rose-500/15 text-rose-800 dark:text-rose-200'
                 )}
               >
-                <span className="text-sm font-medium">{opt.text}</span>
+                <span className="text-sm font-medium">
+                  {isJapanese ? (
+                    <JapaneseTerm card={opt.card} showKanji={showKanji} />
+                  ) : (
+                    opt.card.meaning
+                  )}
+                </span>
                 {showResult && opt.isCorrect && (
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 )}
@@ -151,10 +222,13 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
       ) : (
         <form onSubmit={handleTypeSubmit} className="space-y-3">
           <Input
+            lang={isJapanese ? 'ja' : undefined}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             disabled={typedResult !== null}
-            placeholder={t('study.typingPlaceholder')}
+            placeholder={
+              isJapanese ? t('japanese.typingPlaceholder') : t('study.typingPlaceholder')
+            }
             className="h-12 text-base"
           />
           {typedResult === null ? (
@@ -172,8 +246,8 @@ export function ListeningMode({ card, deckCards, onAnswered }: ListeningModeProp
               >
                 <p className="font-semibold">
                   {typedResult
-                    ? `${t('study.exactMatch')} (${card.term} — ${card.meaning})`
-                    : `${t('study.incorrectAnswer', { expected: card.term })} (${card.meaning})`}
+                    ? `${t('study.exactMatch')} (${spokenText} — ${card.meaning})`
+                    : `${t('study.incorrectAnswer', { expected: spokenText })} (${card.meaning})`}
                 </p>
               </div>
               <Button

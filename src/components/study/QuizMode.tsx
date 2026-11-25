@@ -1,54 +1,108 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { db } from '@/db';
+import { buildJapaneseSampleCards, SAMPLE_WORDS } from '@/db/seed';
+import { getDisplayKana, pickJapaneseQuizDistractors } from '@/features/japanese';
+import { speakText } from '@/features/tts';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { TtsButton } from '@/components/cards/TtsButton';
-import { SAMPLE_WORDS } from '@/db/seed';
-import type { Card, ReviewRating } from '@/types';
+import { JapaneseTerm } from '@/components/cards/JapaneseTerm';
+import type { Card, ReviewRating, StudyDirection } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface QuizModeProps {
   card: Card;
   deckCards: Card[];
+  isJapanese?: boolean;
+  showKanji?: boolean;
+  direction?: StudyDirection;
+  ttsAutoplay?: boolean;
   onAnswered: (rating: ReviewRating, correct: boolean) => void;
 }
 
-export function QuizMode({ card, deckCards, onAnswered }: QuizModeProps) {
+export function QuizMode({
+  card,
+  deckCards,
+  isJapanese = false,
+  showKanji = false,
+  direction = 'term_to_meaning',
+  ttsAutoplay = false,
+  onAnswered,
+}: QuizModeProps) {
   const { t } = useTranslation();
+  const settings = useLiveQuery(() => db.settings.get('default'));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const ttsLang = isJapanese ? 'ja-JP' : settings?.ttsLang || 'en-US';
+  const spokenTerm = isJapanese ? getDisplayKana(card) : card.term;
+  const pickJapaneseOption = isJapanese && direction !== 'term_to_meaning';
 
   useEffect(() => {
     setSelectedId(null);
-  }, [card.id]);
+    if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
+      speakText(spokenTerm, {
+        voiceURI: settings?.ttsVoiceURI,
+        lang: 'ja-JP',
+        rate: settings?.ttsRate ?? 1.0,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.id, direction]);
 
   const options = useMemo(() => {
+    if (isJapanese) {
+      let distractorCards = pickJapaneseQuizDistractors(card, deckCards, 3);
+      if (distractorCards.length < 3) {
+        const extra = pickJapaneseQuizDistractors(
+          card,
+          buildJapaneseSampleCards(),
+          3 - distractorCards.length
+        );
+        const usedIds = new Set([card.id, ...distractorCards.map((d) => d.id)]);
+        for (const ex of extra) {
+          if (!usedIds.has(ex.id) && distractorCards.length < 3) {
+            distractorCards = [...distractorCards, ex];
+            usedIds.add(ex.id);
+          }
+        }
+      }
+
+      const rawOpts = [
+        { id: card.id, card, isCorrect: true },
+        ...distractorCards.map((d) => ({ id: d.id, card: d, isCorrect: false })),
+      ];
+      return rawOpts.sort(() => Math.random() - 0.5);
+    }
+
     const distractors = deckCards
       .filter((c) => c.id !== card.id && c.meaning.trim() !== card.meaning.trim())
       .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map((c) => ({ id: c.id, text: c.meaning, isCorrect: false }));
+      .slice(0, 3);
 
-    // Fallback distractors if deck has fewer than 4 distinct cards
     if (distractors.length < 3) {
-      const existingTexts = new Set([card.meaning, ...distractors.map((d) => d.text)]);
+      const existingTexts = new Set([card.meaning, ...distractors.map((d) => d.meaning)]);
       for (const sample of SAMPLE_WORDS) {
         if (distractors.length >= 3) break;
         if (!existingTexts.has(sample.meaning)) {
           existingTexts.add(sample.meaning);
           distractors.push({
+            ...card,
             id: `fallback_${sample.term}`,
-            text: sample.meaning,
-            isCorrect: false,
+            term: sample.term,
+            meaning: sample.meaning,
           });
         }
       }
     }
 
-    return [{ id: card.id, text: card.meaning, isCorrect: true }, ...distractors].sort(
-      () => Math.random() - 0.5
-    );
-  }, [card, deckCards]);
+    return [
+      { id: card.id, card, isCorrect: true },
+      ...distractors.map((d) => ({ id: d.id, card: d, isCorrect: false })),
+    ].sort(() => Math.random() - 0.5);
+  }, [card, deckCards, isJapanese]);
 
   const choose = (opt: { id: string; isCorrect: boolean }) => {
     if (selectedId) return;
@@ -78,13 +132,35 @@ export function QuizMode({ card, deckCards, onAnswered }: QuizModeProps) {
         <CardContent className="p-6 text-center sm:p-8">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {t('study.quizPrompt')}
+              {pickJapaneseOption ? t('japanese.chooseKana') : t('study.quizPrompt')}
             </span>
-            <TtsButton text={card.term} />
+            <TtsButton text={spokenTerm} lang={ttsLang} />
           </div>
-          <h2 className="mt-4 text-3xl font-bold sm:text-4xl">{card.term}</h2>
-          {card.phonetic && (
-            <p className="mt-1.5 font-mono text-sm text-muted-foreground">{card.phonetic}</p>
+
+          {direction === 'meaning_to_term' && isJapanese ? (
+            <h2 className="mt-4 text-3xl font-bold sm:text-4xl">{card.meaning}</h2>
+          ) : direction === 'listen_to_term' && isJapanese ? (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <TtsButton text={spokenTerm} lang="ja-JP" size="lg" label={t('study.listenPlay')} />
+            </div>
+          ) : isJapanese ? (
+            <>
+              <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
+                <JapaneseTerm card={card} showKanji={showKanji} />
+              </h2>
+              {(card.romaji || card.phonetic) && (
+                <p className="mt-1.5 font-mono text-sm text-muted-foreground">
+                  {card.romaji || card.phonetic}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="mt-4 text-3xl font-bold sm:text-4xl">{card.term}</h2>
+              {card.phonetic && (
+                <p className="mt-1.5 font-mono text-sm text-muted-foreground">{card.phonetic}</p>
+              )}
+            </>
           )}
         </CardContent>
       </UiCard>
@@ -114,7 +190,13 @@ export function QuizMode({ card, deckCards, onAnswered }: QuizModeProps) {
                 <kbd className="rounded bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
                   {idx + 1}
                 </kbd>
-                <span className="text-sm font-medium">{opt.text}</span>
+                <span className="text-sm font-medium">
+                  {pickJapaneseOption ? (
+                    <JapaneseTerm card={opt.card} showKanji={showKanji} />
+                  ) : (
+                    opt.card.meaning
+                  )}
+                </span>
               </span>
               {showResult && opt.isCorrect && (
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />

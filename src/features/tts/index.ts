@@ -13,21 +13,40 @@ export function getAvailableVoices(): SpeechSynthesisVoice[] {
   return window.speechSynthesis.getVoices();
 }
 
+export function pickVoiceForLang(
+  lang: string,
+  preferredVoiceURI?: string
+): SpeechSynthesisVoice | undefined {
+  const voices = getAvailableVoices();
+  if (voices.length === 0) return undefined;
+
+  const targetPrefix = lang.split('-')[0].toLowerCase();
+  if (preferredVoiceURI) {
+    const preferred = voices.find((v) => v.voiceURI === preferredVoiceURI);
+    if (preferred && preferred.lang.toLowerCase().startsWith(targetPrefix)) {
+      return preferred;
+    }
+  }
+
+  return (
+    voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase()) ||
+    voices.find((v) => v.lang.toLowerCase().startsWith(targetPrefix))
+  );
+}
+
 export function speakText(text: string, options: TTSOptions = {}): boolean {
   if (!isTTSSupported() || !text.trim()) return false;
 
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = options.lang || 'en-US';
+    const targetLang = options.lang || 'en-US';
+    utterance.lang = targetLang;
     utterance.rate = Math.min(2, Math.max(0.5, options.rate ?? 1));
 
-    if (options.voiceURI) {
-      const voices = window.speechSynthesis.getVoices();
-      const match = voices.find((v) => v.voiceURI === options.voiceURI);
-      if (match) {
-        utterance.voice = match;
-      }
+    const matchedVoice = pickVoiceForLang(targetLang, options.voiceURI);
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
     }
 
     window.speechSynthesis.speak(utterance);

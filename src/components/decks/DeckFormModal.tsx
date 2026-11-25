@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { createDeck, updateDeck } from '@/db/actions';
 import { useToastStore } from '@/store/useToastStore';
-import type { Deck } from '@/types';
+import type { Deck, DeckLanguage } from '@/types';
 
-const DECK_EMOJIS = ['📘', '📚', '🗣️', '🌍', '💡', '💼', '🎧', '✍️', '🧠', '🎯', '🚀', '🌸'];
+const DECK_EMOJIS = ['📘', '🇯🇵', '📚', '🗣️', '🌍', '💡', '💼', '🎧', '✍️', '🧠', '🎯', '🌸'];
 const DECK_COLORS = [
   '#4f46e5',
   '#0ea5e9',
@@ -31,6 +31,7 @@ export function DeckFormModal({ open, onOpenChange, editingDeck }: DeckFormModal
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [language, setLanguage] = useState<DeckLanguage>('en');
   const [emoji, setEmoji] = useState('📘');
   const [color, setColor] = useState('#4f46e5');
   const [tagsRaw, setTagsRaw] = useState('');
@@ -39,17 +40,27 @@ export function DeckFormModal({ open, onOpenChange, editingDeck }: DeckFormModal
     if (editingDeck) {
       setName(editingDeck.name);
       setDescription(editingDeck.description);
+      setLanguage(editingDeck.language || 'en');
       setEmoji(editingDeck.emoji);
       setColor(editingDeck.color);
       setTagsRaw(editingDeck.tags.join(', '));
     } else {
       setName('');
       setDescription('');
+      setLanguage('en');
       setEmoji('📘');
       setColor('#4f46e5');
       setTagsRaw('');
     }
   }, [editingDeck, open]);
+
+  const handleLanguageChange = (nextLang: DeckLanguage) => {
+    setLanguage(nextLang);
+    if (!editingDeck) {
+      if (nextLang === 'ja' && emoji === '📘') setEmoji('🇯🇵');
+      if (nextLang === 'en' && emoji === '🇯🇵') setEmoji('📘');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +72,10 @@ export function DeckFormModal({ open, onOpenChange, editingDeck }: DeckFormModal
       .filter(Boolean);
 
     if (editingDeck) {
-      await updateDeck(editingDeck.id, { name, description, emoji, color, tags });
+      await updateDeck(editingDeck.id, { name, description, language, emoji, color, tags });
       pushToast({ title: t('decks.editDeck'), description: name.trim(), variant: 'success' });
     } else {
-      await createDeck({ name, description, emoji, color, tags });
+      await createDeck({ name, description, language, emoji, color, tags });
       pushToast({ title: t('decks.newDeck'), description: name.trim(), variant: 'success' });
     }
     onOpenChange(false);
@@ -74,17 +85,36 @@ export function DeckFormModal({ open, onOpenChange, editingDeck }: DeckFormModal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={editingDeck ? t('decks.editDeck') : t('decks.newDeck')}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="deck-name" className="mb-1.5 block text-sm font-medium">
-              {t('decks.name')} *
-            </label>
-            <Input
-              id="deck-name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. IELTS Academic Vocabulary"
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="sm:col-span-2">
+              <label htmlFor="deck-name" className="mb-1.5 block text-sm font-medium">
+                {t('decks.name')} *
+              </label>
+              <Input
+                id="deck-name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={
+                  language === 'ja' ? 'e.g. Japanese N5 Core' : 'e.g. IELTS Academic Vocabulary'
+                }
+              />
+            </div>
+
+            <div>
+              <label htmlFor="deck-language" className="mb-1.5 block text-sm font-medium">
+                {t('decks.language')}
+              </label>
+              <select
+                id="deck-language"
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value as DeckLanguage)}
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              >
+                <option value="en">{t('decks.langEn')}</option>
+                <option value="ja">{t('decks.langJa')}</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -149,7 +179,7 @@ export function DeckFormModal({ open, onOpenChange, editingDeck }: DeckFormModal
               id="deck-tags"
               value={tagsRaw}
               onChange={(e) => setTagsRaw(e.target.value)}
-              placeholder="ielts, business, daily"
+              placeholder="ielts, japanese, daily"
             />
           </div>
 

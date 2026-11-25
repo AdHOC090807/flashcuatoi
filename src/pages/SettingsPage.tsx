@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Volume2 } from 'lucide-react';
 import { db } from '@/db';
 import { resetAllData, updateSettings } from '@/db/actions';
-import { seedDatabaseIfEmpty } from '@/db/seed';
+import { seedDatabaseIfEmpty, seedJapaneseSampleDeck } from '@/db/seed';
 import { getAvailableVoices, speakText } from '@/features/tts';
 import { useToastStore } from '@/store/useToastStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -108,6 +108,41 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Japanese Display & Audio */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.japaneseTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <label htmlFor="pref-show-kanji" className="text-sm font-medium">
+                {t('settings.showKanji')}
+              </label>
+              <p className="text-xs text-muted-foreground">{t('settings.showKanjiDesc')}</p>
+            </div>
+            <Switch
+              id="pref-show-kanji"
+              checked={Boolean(settings.showKanji)}
+              onCheckedChange={(v) => void updateSettings({ showKanji: v })}
+              aria-label={t('settings.showKanji')}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+            <label htmlFor="pref-tts-autoplay" className="text-sm font-medium">
+              {t('settings.ttsAutoplay')}
+            </label>
+            <Switch
+              id="pref-tts-autoplay"
+              checked={Boolean(settings.ttsAutoplay)}
+              onCheckedChange={(v) => void updateSettings({ ttsAutoplay: v })}
+              aria-label={t('settings.ttsAutoplay')}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* SRS */}
       <Card>
         <CardHeader>
@@ -201,19 +236,33 @@ export function SettingsPage() {
                 className="w-full accent-primary"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() =>
-                speakText('Resilient learners practice every single day.', {
-                  voiceURI: settings.ttsVoiceURI,
-                  lang: settings.ttsLang,
-                  rate: settings.ttsRate,
-                })
-              }
-            >
-              <Volume2 className="h-4 w-4" />
-              <span>{t('settings.testVoice')}</span>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  speakText('Resilient learners practice every single day.', {
+                    voiceURI: settings.ttsVoiceURI,
+                    lang: settings.ttsLang,
+                    rate: settings.ttsRate,
+                  })
+                }
+              >
+                <Volume2 className="h-4 w-4" />
+                <span>{t('settings.testVoice')}</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  speakText('にほんごのべんきょうをがんばりましょう。', {
+                    lang: 'ja-JP',
+                    rate: settings.ttsRate,
+                  })
+                }
+              >
+                <Volume2 className="h-4 w-4" />
+                <span>{t('settings.testJaVoice')}</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -313,13 +362,28 @@ export function SettingsPage() {
               pushToast({
                 title: t('settings.reseedSample'),
                 description: seeded
-                  ? 'Sample deck added.'
+                  ? 'Sample decks added.'
                   : 'Decks already exist — delete all first or import.',
                 variant: seeded ? 'success' : 'default',
               });
             }}
           >
             {t('settings.reseedSample')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const added = await seedJapaneseSampleDeck();
+              pushToast({
+                title: t('settings.addJaSample'),
+                description: added
+                  ? 'Beginner Japanese deck added.'
+                  : 'Japanese starter deck already exists.',
+                variant: added ? 'success' : 'default',
+              });
+            }}
+          >
+            {t('settings.addJaSample')}
           </Button>
           <Button variant="destructive" onClick={() => setConfirmReset(true)}>
             {t('settings.resetData')}
