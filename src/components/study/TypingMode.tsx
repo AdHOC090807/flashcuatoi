@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { db } from '@/db';
 import { getDisplayKana, isJapaneseMatch } from '@/features/japanese';
-import { speakText } from '@/features/tts';
+import { debouncedPlayTTS, resolveTTSProvider, stopSpeaking } from '@/features/tts';
 import { isTolerantMatch } from '@/lib/utils';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -48,12 +48,20 @@ export function TypingMode({
     setChecked(null);
     inputRef.current?.focus();
     if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
-      speakText(spokenTerm, {
+      debouncedPlayTTS(spokenTerm, {
         voiceURI: settings?.ttsVoiceURI,
         lang: 'ja-JP',
         rate: settings?.ttsRate ?? 1.0,
+        audioUrl: card.audioUrl,
+        provider: resolveTTSProvider(settings),
+        elevenLabsApiKey: settings?.elevenLabsApiKey,
+        elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+        elevenLabsModel: settings?.elevenLabsModel,
       });
     }
+    return () => {
+      stopSpeaking();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id, direction]);
 
@@ -90,7 +98,7 @@ export function TypingMode({
                 ? t('japanese.typingKanaOrRomaji')
                 : t('study.typingPrompt')}
             </span>
-            <TtsButton text={spokenTerm} lang={ttsLang} />
+            <TtsButton text={spokenTerm} lang={ttsLang} audioUrl={card.audioUrl} />
           </div>
 
           {expectMeaning ? (

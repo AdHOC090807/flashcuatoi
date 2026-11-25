@@ -289,6 +289,25 @@
       "yoon": "Yoon"
     }
   },
+  "tts": {
+    "provider": "TTS Provider",
+    "providerProxy": "ElevenLabs Proxy (Default)",
+    "providerProxyUnconfigured": "ElevenLabs Proxy (Not configured)",
+    "providerWebSpeech": "Browser Web Speech (Offline)",
+    "providerByok": "ElevenLabs (Bring Your Own Key — Advanced)",
+    "byokApiKey": "ElevenLabs API Key (local only)",
+    "byokVoiceId": "Voice ID",
+    "byokModel": "Model",
+    "audioUrlOptional": "Audio URL (optional)",
+    "checkProxy": "Recheck proxy status",
+    "fallbackError": "Proxy failed — using browser voice fallback",
+    "proxyStatus": {
+      "checking": "Proxy: Checking...",
+      "reachable": "Proxy: Reachable",
+      "error": "Proxy: Error",
+      "unconfigured": "Proxy: Not configured"
+    }
+  },
   "onboarding": {
     "step1Title": "Welcome to LexiCards!",
     "step1Desc": "We preloaded 20 essential English → Vietnamese words so you can start learning right away.",

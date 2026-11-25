@@ -289,6 +289,25 @@
       "yoon": "Âm ghép"
     }
   },
+  "tts": {
+    "provider": "Nguồn đọc (TTS Provider)",
+    "providerProxy": "ElevenLabs Proxy (Mặc định)",
+    "providerProxyUnconfigured": "ElevenLabs Proxy (Chưa cấu hình)",
+    "providerWebSpeech": "Trình duyệt Web Speech (Ngoại tuyến)",
+    "providerByok": "ElevenLabs (Tự nhập API Key — Nâng cao)",
+    "byokApiKey": "ElevenLabs API Key (chỉ lưu trên máy)",
+    "byokVoiceId": "Voice ID",
+    "byokModel": "Model",
+    "audioUrlOptional": "URL âm thanh (tùy chọn)",
+    "checkProxy": "Kiểm tra lại proxy",
+    "fallbackError": "Proxy lỗi — chuyển sang giọng trình duyệt",
+    "proxyStatus": {
+      "checking": "Proxy: Đang kiểm tra...",
+      "reachable": "Proxy: Hoạt động",
+      "error": "Proxy: Lỗi kết nối",
+      "unconfigured": "Proxy: Chưa cấu hình"
+    }
+  },
   "onboarding": {
     "step1Title": "Chào mừng đến với LexiCards!",
     "step1Desc": "Chúng tôi đã chuẩn bị sẵn 20 từ tiếng Anh → tiếng Việt thông dụng để bạn học ngay.",

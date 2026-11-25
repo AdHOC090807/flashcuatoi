@@ -455,6 +455,7 @@ export function DeckDetailPage() {
                 <TtsButton
                   text={isJapanese ? card.kana || card.term : card.term}
                   lang={isJapanese ? 'ja-JP' : undefined}
+                  audioUrl={card.audioUrl}
                   size="icon"
                 />
                 <Button

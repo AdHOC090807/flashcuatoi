@@ -10,7 +10,7 @@ import {
   type KanaRowGroup,
   type KanaScript,
 } from '@/features/japanese/kanaData';
-import { speakText } from '@/features/tts';
+import { playTTS, resolveTTSProvider } from '@/features/tts';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -56,10 +56,14 @@ export function KanaTrainerPage() {
 
   const speakKana = (item: KanaItem) => {
     const glyph = script === 'hiragana' ? item.hiragana : item.katakana;
-    speakText(glyph, {
+    void playTTS(glyph, {
       voiceURI: settings?.ttsVoiceURI,
       lang: 'ja-JP',
       rate: settings?.ttsRate ?? 1.0,
+      provider: resolveTTSProvider(settings),
+      elevenLabsApiKey: settings?.elevenLabsApiKey,
+      elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+      elevenLabsModel: settings?.elevenLabsModel,
     });
   };
 

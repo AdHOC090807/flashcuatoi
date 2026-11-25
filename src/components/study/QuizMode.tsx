@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { db } from '@/db';
 import { buildJapaneseSampleCards, SAMPLE_WORDS } from '@/db/seed';
 import { getDisplayKana, pickJapaneseQuizDistractors } from '@/features/japanese';
-import { speakText } from '@/features/tts';
+import { debouncedPlayTTS, resolveTTSProvider, stopSpeaking } from '@/features/tts';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { TtsButton } from '@/components/cards/TtsButton';
@@ -43,12 +43,20 @@ export function QuizMode({
   useEffect(() => {
     setSelectedId(null);
     if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
-      speakText(spokenTerm, {
+      debouncedPlayTTS(spokenTerm, {
         voiceURI: settings?.ttsVoiceURI,
         lang: 'ja-JP',
         rate: settings?.ttsRate ?? 1.0,
+        audioUrl: card.audioUrl,
+        provider: resolveTTSProvider(settings),
+        elevenLabsApiKey: settings?.elevenLabsApiKey,
+        elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+        elevenLabsModel: settings?.elevenLabsModel,
       });
     }
+    return () => {
+      stopSpeaking();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id, direction]);
 
@@ -134,7 +142,7 @@ export function QuizMode({
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {pickJapaneseOption ? t('japanese.chooseKana') : t('study.quizPrompt')}
             </span>
-            <TtsButton text={spokenTerm} lang={ttsLang} />
+            <TtsButton text={spokenTerm} lang={ttsLang} audioUrl={card.audioUrl} />
           </div>
 
           {direction === 'meaning_to_term' && isJapanese ? (

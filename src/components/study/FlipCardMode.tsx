@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 import { db } from '@/db';
-import { speakText } from '@/features/tts';
+import { debouncedPlayTTS, resolveTTSProvider, stopSpeaking } from '@/features/tts';
 import { getDisplayKana } from '@/features/japanese';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -48,12 +48,20 @@ export function FlipCardMode({
   useEffect(() => {
     setFlipped(false);
     if (isJapanese && (ttsAutoplay || direction === 'listen_to_term')) {
-      speakText(spokenTerm, {
+      debouncedPlayTTS(spokenTerm, {
         voiceURI: settings?.ttsVoiceURI,
         lang: 'ja-JP',
         rate: settings?.ttsRate ?? 1.0,
+        audioUrl: card.audioUrl,
+        provider: resolveTTSProvider(settings),
+        elevenLabsApiKey: settings?.elevenLabsApiKey,
+        elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+        elevenLabsModel: settings?.elevenLabsModel,
       });
     }
+    return () => {
+      stopSpeaking();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id]);
 
@@ -87,7 +95,13 @@ export function FlipCardMode({
     ) : direction === 'listen_to_term' ? (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">{t('study.listenPrompt')}</p>
-        <TtsButton text={spokenTerm} lang={ttsLang} size="lg" label={t('study.listenPlay')} />
+        <TtsButton
+          text={spokenTerm}
+          lang={ttsLang}
+          audioUrl={card.audioUrl}
+          size="lg"
+          label={t('study.listenPlay')}
+        />
       </div>
     ) : isJapanese ? (
       <>
@@ -142,7 +156,7 @@ export function FlipCardMode({
                   <Badge variant="outline">{t('japanese.lessonBadge', { num: card.lesson })}</Badge>
                 )}
               </div>
-              <TtsButton text={spokenTerm} lang={ttsLang} />
+              <TtsButton text={spokenTerm} lang={ttsLang} audioUrl={card.audioUrl} />
             </div>
 
             <div className="flex flex-col items-center justify-center text-center">

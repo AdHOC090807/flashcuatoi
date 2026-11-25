@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
-import { Volume2 } from 'lucide-react';
+import { RefreshCw, Volume2 } from 'lucide-react';
 import { db } from '@/db';
 import { resetAllData, updateSettings } from '@/db/actions';
 import { seedDatabaseIfEmpty, seedJapaneseSampleDeck } from '@/db/seed';
-import { getAvailableVoices, speakText } from '@/features/tts';
+import {
+  checkProxyHealth,
+  getAvailableVoices,
+  getProxyUrl,
+  playTTS,
+  resolveTTSProvider,
+} from '@/features/tts';
 import { useToastStore } from '@/store/useToastStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { AppLanguage, ThemeMode } from '@/types';
+import type { AppLanguage, ThemeMode, TTSProviderType } from '@/types';
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -21,6 +28,22 @@ export function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('default'));
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [proxyStatus, setProxyStatus] = useState<
+    'checking' | 'reachable' | 'error' | 'unconfigured'
+  >('checking');
+
+  const proxyUrl = getProxyUrl();
+
+  const refreshProxyStatus = async () => {
+    setProxyStatus('checking');
+    const result = await checkProxyHealth(proxyUrl);
+    setProxyStatus(result);
+  };
+
+  useEffect(() => {
+    void refreshProxyStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proxyUrl]);
 
   useEffect(() => {
     const loadVoices = () => setVoices(getAvailableVoices());
@@ -185,10 +208,54 @@ export function SettingsPage() {
       {/* TTS */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('settings.tts')}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>{t('settings.tts')}</CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={
+                  proxyStatus === 'reachable'
+                    ? 'success'
+                    : proxyStatus === 'error'
+                      ? 'danger'
+                      : 'secondary'
+                }
+              >
+                {t(`tts.proxyStatus.${proxyStatus}`)}
+              </Badge>
+              {proxyUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void refreshProxyStatus()}
+                  aria-label={t('tts.checkProxy')}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="pref-tts-provider" className="mb-1.5 block text-sm font-medium">
+                {t('tts.provider')}
+              </label>
+              <select
+                id="pref-tts-provider"
+                value={resolveTTSProvider(settings)}
+                onChange={(e) =>
+                  void updateSettings({ ttsProvider: e.target.value as TTSProviderType })
+                }
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              >
+                <option value="proxy" disabled={!proxyUrl}>
+                  {proxyUrl ? t('tts.providerProxy') : t('tts.providerProxyUnconfigured')}
+                </option>
+                <option value="webspeech">{t('tts.providerWebSpeech')}</option>
+                <option value="elevenlabs_byok">{t('tts.providerByok')}</option>
+              </select>
+            </div>
             <div>
               <label htmlFor="pref-tts-voice" className="mb-1.5 block text-sm font-medium">
                 {t('settings.ttsVoice')}
@@ -207,6 +274,48 @@ export function SettingsPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {resolveTTSProvider(settings) === 'elevenlabs_byok' && (
+            <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-muted/40 p-3 sm:grid-cols-3">
+              <div>
+                <label htmlFor="el-key" className="mb-1 block text-xs font-medium">
+                  {t('tts.byokApiKey')}
+                </label>
+                <Input
+                  id="el-key"
+                  type="password"
+                  value={settings.elevenLabsApiKey || ''}
+                  onChange={(e) => void updateSettings({ elevenLabsApiKey: e.target.value })}
+                  placeholder="xi-..."
+                />
+              </div>
+              <div>
+                <label htmlFor="el-voice" className="mb-1 block text-xs font-medium">
+                  {t('tts.byokVoiceId')}
+                </label>
+                <Input
+                  id="el-voice"
+                  value={settings.elevenLabsVoiceId || ''}
+                  onChange={(e) => void updateSettings({ elevenLabsVoiceId: e.target.value })}
+                  placeholder="21m00Tcm4TlvDq8ikWAM"
+                />
+              </div>
+              <div>
+                <label htmlFor="el-model" className="mb-1 block text-xs font-medium">
+                  {t('tts.byokModel')}
+                </label>
+                <Input
+                  id="el-model"
+                  value={settings.elevenLabsModel || ''}
+                  onChange={(e) => void updateSettings({ elevenLabsModel: e.target.value })}
+                  placeholder="eleven_multilingual_v2"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="pref-tts-lang" className="mb-1.5 block text-sm font-medium">
                 {t('settings.ttsLang')}
@@ -218,10 +327,7 @@ export function SettingsPage() {
                 placeholder="en-US"
               />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
+            <div className="flex flex-col justify-end">
               <label htmlFor="pref-tts-rate" className="mb-1 block text-sm font-medium">
                 {t('settings.ttsRate', { rate: settings.ttsRate.toFixed(1) })}
               </label>
@@ -236,33 +342,42 @@ export function SettingsPage() {
                 className="w-full accent-primary"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  speakText('Resilient learners practice every single day.', {
-                    voiceURI: settings.ttsVoiceURI,
-                    lang: settings.ttsLang,
-                    rate: settings.ttsRate,
-                  })
-                }
-              >
-                <Volume2 className="h-4 w-4" />
-                <span>{t('settings.testVoice')}</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  speakText('にほんごのべんきょうをがんばりましょう。', {
-                    lang: 'ja-JP',
-                    rate: settings.ttsRate,
-                  })
-                }
-              >
-                <Volume2 className="h-4 w-4" />
-                <span>{t('settings.testJaVoice')}</span>
-              </Button>
-            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                void playTTS('Resilient learners practice every single day.', {
+                  voiceURI: settings.ttsVoiceURI,
+                  lang: settings.ttsLang,
+                  rate: settings.ttsRate,
+                  provider: resolveTTSProvider(settings),
+                  elevenLabsApiKey: settings.elevenLabsApiKey,
+                  elevenLabsVoiceId: settings.elevenLabsVoiceId,
+                  elevenLabsModel: settings.elevenLabsModel,
+                })
+              }
+            >
+              <Volume2 className="h-4 w-4" />
+              <span>{t('settings.testVoice')}</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                void playTTS('にほんごのべんきょうをがんばりましょう。', {
+                  lang: 'ja-JP',
+                  rate: settings.ttsRate,
+                  provider: resolveTTSProvider(settings),
+                  elevenLabsApiKey: settings.elevenLabsApiKey,
+                  elevenLabsVoiceId: settings.elevenLabsVoiceId,
+                  elevenLabsModel: settings.elevenLabsModel,
+                })
+              }
+            >
+              <Volume2 className="h-4 w-4" />
+              <span>{t('settings.testJaVoice')}</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

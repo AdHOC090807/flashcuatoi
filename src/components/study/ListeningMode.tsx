@@ -6,7 +6,7 @@ import { db } from '@/db';
 import { updateSettings } from '@/db/actions';
 import { buildJapaneseSampleCards, SAMPLE_WORDS } from '@/db/seed';
 import { getDisplayKana, isJapaneseMatch, pickJapaneseQuizDistractors } from '@/features/japanese';
-import { speakText } from '@/features/tts';
+import { debouncedPlayTTS, playTTS, resolveTTSProvider, stopSpeaking } from '@/features/tts';
 import { isTolerantMatch, cn } from '@/lib/utils';
 import { Card as UiCard, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -40,11 +40,19 @@ export function ListeningMode({
   const spokenText = isJapanese ? getDisplayKana(card) : card.term;
   const rate = settings?.ttsRate ?? 1.0;
 
+  const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+
   const playAudio = () => {
-    speakText(spokenText, {
+    void playTTS(spokenText, {
       voiceURI: settings?.ttsVoiceURI,
       lang: ttsLang,
       rate,
+      audioUrl: card.audioUrl,
+      provider: resolveTTSProvider(settings),
+      elevenLabsApiKey: settings?.elevenLabsApiKey,
+      elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+      elevenLabsModel: settings?.elevenLabsModel,
+      onStatusChange: setAudioStatus,
     });
   };
 
@@ -52,7 +60,20 @@ export function ListeningMode({
     setSelectedId(null);
     setTyped('');
     setTypedResult(null);
-    playAudio();
+    debouncedPlayTTS(spokenText, {
+      voiceURI: settings?.ttsVoiceURI,
+      lang: ttsLang,
+      rate,
+      audioUrl: card.audioUrl,
+      provider: resolveTTSProvider(settings),
+      elevenLabsApiKey: settings?.elevenLabsApiKey,
+      elevenLabsVoiceId: settings?.elevenLabsVoiceId,
+      elevenLabsModel: settings?.elevenLabsModel,
+      onStatusChange: setAudioStatus,
+    });
+    return () => {
+      stopSpeaking();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card.id]);
 
@@ -149,6 +170,7 @@ export function ListeningMode({
             <Button
               size="lg"
               onClick={playAudio}
+              disabled={audioStatus === 'loading'}
               className="h-16 w-16 rounded-full shadow-md"
               aria-label={t('study.listenPlay')}
             >

@@ -44,6 +44,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
   const [exampleTranslation, setExampleTranslation] = useState('');
   const [notes, setNotes] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
   const [tagsRaw, setTagsRaw] = useState('');
 
   // Japanese-specific fields
@@ -71,6 +72,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
       setExampleTranslation(editingCard.exampleTranslation);
       setNotes(editingCard.notes);
       setImageUrl(editingCard.imageUrl);
+      setAudioUrl(editingCard.audioUrl || '');
       setTagsRaw(editingCard.tags.join(', '));
       setKana(editingCard.kana || editingCard.term);
       setRomaji(editingCard.romaji || kanaToRomaji(editingCard.kana || editingCard.term));
@@ -91,6 +93,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
       setExampleTranslation('');
       setNotes('');
       setImageUrl('');
+      setAudioUrl('');
       setTagsRaw('');
       setKana('');
       setRomaji('');
@@ -193,6 +196,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
           exampleTranslation,
           notes,
           imageUrl,
+          audioUrl: audioUrl.trim() || undefined,
           tags,
           kana: kana.trim(),
           romaji: romaji.trim() || kanaToRomaji(kana),
@@ -211,6 +215,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
           exampleTranslation,
           notes,
           imageUrl,
+          audioUrl: audioUrl.trim() || undefined,
           tags,
         };
 
@@ -500,7 +505,7 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label htmlFor="card-image" className="mb-1 block text-sm font-medium">
                 {t('cards.imageUrl')}
@@ -511,6 +516,18 @@ export function CardFormModal({ open, onOpenChange, deckId, editingCard }: CardF
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label htmlFor="card-audio" className="mb-1 block text-sm font-medium">
+                {t('tts.audioUrlOptional')}
+              </label>
+              <Input
+                id="card-audio"
+                type="url"
+                value={audioUrl}
+                onChange={(e) => setAudioUrl(e.target.value)}
+                placeholder="https://...mp3"
               />
             </div>
             <div>
