@@ -9,7 +9,7 @@
   - **English**: Term, meaning, IPA phonetic, part of speech, example sentence & translation, notes, image URL, tags.
   - **Japanese (`deck.language === 'ja'`)**: Kana primary term, auto-generated editable Romaji (`wanakana`), optional Kanji (hidden by default; renders `<ruby>` furigana when enabled in Settings), word type, Lesson (`1..50`), and optional verb conjugations (`ます / て / た / ない`).
 - **Study Modes**:
-  - **Flip Card**: Smooth 3D card flip (`Space` to flip, `1-4` to rate, arrow keys to navigate, respects `prefers-reduced-motion`).
+  - **Flip Card**: Quizlet / Tinder-style swipe gestures powered by Framer Motion (`← Again`, `→ Good`, `↑ Easy`, `↓ Hard`), 3-card depth stack, tap-to-flip, up to 20-step SM-2 Undo (`Ctrl/Cmd+Z` / `U`), desktop Arrow/Space/`1-4` shortcuts, and `prefers-reduced-motion` support.
   - **Quiz**: Auto-generated 4-option multiple choice (for Japanese decks, prioritizes same `wordType` and similar kana length).
   - **Typing**: Tolerant answer checker — English normalizes case/accents/minor typos; Japanese accepts **kana OR romaji** with long-vowel (`ou`/`oo`/`ō`/`ー`), small `っ`, `ん`/`n'`, and hiragana–katakana equivalence.
   - **Matching**: Timed pairs board with accuracy tracking and SRS credit.
@@ -80,6 +80,21 @@ Each card tracks `easeFactor` (default `2.5`, minimum `1.3`), `interval` (days),
 4. **Easy (`4`)**: Accelerated progression (`4d` → `8d` → `interval × easeFactor × 1.3`) and increases ease factor by `+0.15`.
 
 Daily study queues prioritize due **Learning** cards, then due **Review** cards, followed by **New** cards capped by your configurable `dailyNewLimit`.
+
+## Swipe Gestures & Undo (Flip Mode)
+
+In **Flip Card** mode, you can review English or Japanese cards with smooth spring-physics swipe gestures or traditional buttons/keyboard shortcuts:
+
+| Action / Gesture      | Keyboard Shortcut   | SM-2 Rating | Overlay Badge       |
+| --------------------- | ------------------- | ----------- | ------------------- |
+| Swipe Left            | `ArrowLeft` / `1`   | **Again**   | Red (`Học lại`)     |
+| Swipe Down            | `ArrowDown` / `2`   | **Hard**    | Orange (`Khó`)      |
+| Swipe Right           | `ArrowRight` / `3`  | **Good**    | Green (`Đã nhớ`)    |
+| Swipe Up              | `ArrowUp` / `4`     | **Easy**    | Blue (`Dễ`)         |
+| Tap card (< 6px drag) | `Space` / `Enter`   | Flip face   | —                   |
+| **Undo** button       | `Ctrl/Cmd+Z` or `U` | Revert SM-2 | Up to 20 last cards |
+
+Configure **Enable swipe gestures**, **Allow swipe before flip**, **Swipe sensitivity (60 / 100 / 140 px)**, **Enable Up / Down swipes**, and **Haptics** under **Settings → Swipe & Gestures**.
 
 ## Roadmap
 
