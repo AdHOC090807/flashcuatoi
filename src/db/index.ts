@@ -69,14 +69,27 @@ export class LexiCardsDatabase extends Dexie {
       ttsCache: 'key, createdAt',
     });
 
-    this.version(4).stores({
-      decks: 'id, name, language, createdAt, updatedAt, *tags',
-      cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
-      reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
-      settings: 'id',
-      ttsCache: 'key, createdAt',
-      importHistory: 'id, deckId, createdAt',
-    });
+    this.version(4)
+      .stores({
+        decks: 'id, name, language, createdAt, updatedAt, *tags',
+        cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
+        reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
+        settings: 'id',
+        ttsCache: 'key, createdAt',
+        importHistory: 'id, deckId, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((setting: Partial<UserSettings>) => {
+            if (setting.swipeEnabled === undefined) setting.swipeEnabled = true;
+            if (setting.allowSwipeBeforeFlip === undefined) setting.allowSwipeBeforeFlip = true;
+            if (setting.swipeThreshold === undefined) setting.swipeThreshold = 100;
+            if (setting.swipeVerticalEnabled === undefined) setting.swipeVerticalEnabled = true;
+            if (setting.hapticsEnabled === undefined) setting.hapticsEnabled = true;
+          });
+      });
   }
 }
 
@@ -97,6 +110,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
   elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
   elevenLabsModel: 'eleven_multilingual_v2',
   showKanji: false,
+  swipeEnabled: true,
+  allowSwipeBeforeFlip: true,
+  swipeThreshold: 100,
+  swipeVerticalEnabled: true,
+  hapticsEnabled: true,
   remindersEnabled: false,
   reminderTime: '20:00',
   aiEnabled: false,

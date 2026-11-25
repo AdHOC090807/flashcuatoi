@@ -11,6 +11,8 @@ interface SessionSummaryProps {
   accuracyPct: number;
   xpEarned: number;
   unlockedBadgeIds: string[];
+  canUndoLast?: boolean;
+  onUndoLast?: () => void;
   onRestart: () => void;
 }
 
@@ -20,6 +22,8 @@ export function SessionSummary({
   accuracyPct,
   xpEarned,
   unlockedBadgeIds,
+  canUndoLast = false,
+  onUndoLast,
   onRestart,
 }: SessionSummaryProps) {
   const { t } = useTranslation();
@@ -72,6 +76,12 @@ export function SessionSummary({
         )}
 
         <div className="flex flex-col gap-2 sm:flex-row">
+          {canUndoLast && onUndoLast && (
+            <Button variant="outline" className="flex-1" onClick={onUndoLast}>
+              <RotateCcw className="h-4 w-4" />
+              <span>{t('study.undoLast')}</span>
+            </Button>
+          )}
           <Button variant="outline" className="flex-1" onClick={onRestart}>
             <RotateCcw className="h-4 w-4" />
             <span>{t('study.practiceAgain')}</span>
