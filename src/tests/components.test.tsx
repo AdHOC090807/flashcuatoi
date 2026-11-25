@@ -33,6 +33,7 @@ const sampleDeck: Deck = {
   description: 'Core vocabulary',
   color: '#4f46e5',
   emoji: '📘',
+  language: 'en',
   tags: ['english'],
   createdAt: now,
   updatedAt: now,

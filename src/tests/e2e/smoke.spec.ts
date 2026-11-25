@@ -40,6 +40,22 @@ test.describe('LexiCards smoke tests', () => {
     await page.getByRole('tab', { name: 'Typing' }).click();
     await expect(page.getByPlaceholder('Type your answer...')).toBeVisible();
 
+    // Verify Japanese starter deck, lessons, romaji typing, and Kana Trainer
+    await page.goto('/decks');
+    await expect(page.getByText('Beginner Japanese → Vietnamese', { exact: true })).toBeVisible();
+    await page.getByText('Beginner Japanese → Vietnamese', { exact: true }).click();
+    await expect(page.getByText('Lessons', { exact: true })).toBeVisible();
+    // Kanji should be hidden by default
+    await expect(page.getByText('たべる')).toBeVisible();
+    await expect(page.getByText('食べる')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Typing' }).click();
+    await expect(page.getByPlaceholder('e.g. たべる or taberu')).toBeVisible();
+
+    await page.goto('/kana');
+    await expect(page.getByRole('heading', { name: 'Kana Trainer' })).toBeVisible();
+    await expect(page.getByText('あ', { exact: true })).toBeVisible();
+
     await page.goto('/import-export');
     await expect(page.getByRole('heading', { name: 'Import & Export' })).toBeVisible();
 
