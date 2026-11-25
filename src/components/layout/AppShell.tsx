@@ -8,6 +8,7 @@ import {
   FolderUp,
   HelpCircle,
   Home,
+  Languages,
   Moon,
   Settings,
   Sun,
@@ -43,6 +44,7 @@ export function AppShell() {
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: Home, end: true },
     { to: '/decks', label: t('nav.decks'), icon: BookOpen, end: false },
+    { to: '/kana', label: t('nav.kana'), icon: Languages, end: false },
     { to: '/stats', label: t('nav.stats'), icon: BarChart3, end: false },
     { to: '/import-export', label: t('nav.importExport'), icon: FolderUp, end: false },
     { to: '/settings', label: t('nav.settings'), icon: Settings, end: false },

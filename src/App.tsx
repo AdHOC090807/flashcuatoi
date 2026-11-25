@@ -15,6 +15,7 @@ import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { StudyPage } from '@/pages/StudyPage';
 import { ImportExportPage } from '@/pages/ImportExportPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { KanaTrainerPage } from '@/pages/KanaTrainerPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 const StatsPage = lazy(() =>
@@ -70,6 +71,7 @@ export function App() {
             <Route path="/decks" element={<DecksPage />} />
             <Route path="/decks/:id" element={<DeckDetailPage />} />
             <Route path="/study/:deckId" element={<StudyPage />} />
+            <Route path="/kana" element={<KanaTrainerPage />} />
             <Route
               path="/stats"
               element={
