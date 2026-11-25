@@ -1,28 +1,33 @@
 # LexiCards
 
-> Offline-first vocabulary learning web application powered by **SM-2 spaced repetition**, 5 interactive study modes, rich analytics, and bilingual English/Vietnamese UI.
+> Offline-first vocabulary learning web application powered by **SM-2 spaced repetition**, multi-mode practice, Japanese kana/lesson support, rich analytics, and bilingual English/Vietnamese UI.
 
 ## Features
 
-- **Deck Management**: Create, rename, color-code, add emoji icons, tag, search, filter, and sort vocabulary decks.
-- **Full Card CRUD**: Term, meaning, IPA phonetic, part of speech, example sentence & translation, notes, optional image URL, tags, bulk add, bulk delete, move between decks, and live duplicate detection.
-- **5 Study Modes**:
+- **English & Japanese Decks**: Create `en` or `ja` decks with color accents, emoji icons, tags, search, filter, and sort.
+- **Full Card CRUD**:
+  - **English**: Term, meaning, IPA phonetic, part of speech, example sentence & translation, notes, image URL, tags.
+  - **Japanese (`deck.language === 'ja'`)**: Kana primary term, auto-generated editable Romaji (`wanakana`), optional Kanji (hidden by default; renders `<ruby>` furigana when enabled in Settings), word type, Lesson (`1..50`), and optional verb conjugations (`ます / て / た / ない`).
+- **Study Modes**:
   - **Flip Card**: Smooth 3D card flip (`Space` to flip, `1-4` to rate, arrow keys to navigate, respects `prefers-reduced-motion`).
-  - **Quiz**: Auto-generated 4-option multiple choice from the deck with keyboard shortcuts (`1-4`).
-  - **Typing**: Tolerant answer checker normalizing case, accents/diacritics, and minor typos via Levenshtein distance.
+  - **Quiz**: Auto-generated 4-option multiple choice (for Japanese decks, prioritizes same `wordType` and similar kana length).
+  - **Typing**: Tolerant answer checker — English normalizes case/accents/minor typos; Japanese accepts **kana OR romaji** with long-vowel (`ou`/`oo`/`ō`/`ー`), small `っ`, `ん`/`n'`, and hiragana–katakana equivalence.
   - **Matching**: Timed pairs board with accuracy tracking and SRS credit.
-  - **Listening**: Web Speech API audio playback with selectable Pick Meaning or Type Word modes.
+  - **Listening**: Web Speech API (`en-US` / `ja-JP` auto-voice) with speed slider, replay, autoplay toggle, and Pick / Type sub-modes.
+  - **Conjugation Drill**: Verb conjugation quiz (`ます / て / た / ない`) for Japanese verb cards.
+- **Kana Trainer (`/kana`)**: Interactive Hiragana & Katakana charts, selectable row groups (Basic, Dakuten, Handakuten, Yoon), Flashcards, and Quiz with `ja-JP` TTS.
+- **Lessons (`Bài 1..50`)**: Group Japanese vocabulary by lesson with per-lesson progress bars and a **"Study lessons X to Y"** combined queue.
 - **SM-2 Spaced Repetition**: Pure deterministic SM-2 scheduler managing ease factor, intervals, repetitions, lapses, and daily New / Learning / Due queues.
 - **Statistics & Gamification**: Recharts daily activity & retention curve, 12-week study heatmap, hardest cards list, per-deck mastery progress, daily streak, SVG goal ring, XP, and achievement badges.
-- **Import / Export & Backup**: Drag-and-drop CSV, Anki TSV, and JSON importer with live preview, column mapping, and duplicate strategies; plus CSV/TSV export and full JSON backup/restore.
-- **Bilingual & Accessible**: English & Vietnamese (`react-i18next`), Light/Dark/System themes, semantic HTML, ARIA attributes, WCAG AA contrast, and offline-ready PWA (`vite-plugin-pwa`).
-- **Optional AI Assist**: Disabled by default; stores an OpenAI-compatible API key strictly locally in IndexedDB to auto-fill meaning, IPA, and examples when enabled.
+- **Import / Export & Backup**: Drag-and-drop CSV, Anki TSV, and JSON importer with live preview, Anki Japanese presets, column mapping, duplicate strategies, CSV/TSV export, and full JSON backup/restore (backward-compatible with v1 backups).
+- **Bilingual, Accessible & Offline-First**: English & Vietnamese (`react-i18next`), Light/Dark/System themes, self-hosted Noto Sans JP (`@fontsource/noto-sans-jp`), `lang="ja"` markup, WCAG AA contrast, and PWA (`vite-plugin-pwa`).
+- **Optional AI Assist**: Disabled by default; stores an OpenAI-compatible API key strictly locally in IndexedDB to auto-fill card fields when enabled.
 
 ## Tech Stack
 
 - **Frontend**: React 18, TypeScript, Vite, React Router v6
-- **Styling & UI**: Tailwind CSS, Radix UI primitives, Lucide icons
-- **State & Storage**: Zustand, Dexie (IndexedDB)
+- **Styling & UI**: Tailwind CSS, Radix UI primitives, Lucide icons, `@fontsource/noto-sans-jp`
+- **State, Storage & Japanese**: Zustand, Dexie v4 (IndexedDB with v1→v2 migration), `wanakana`
 - **Charts & i18n**: Recharts, i18next / react-i18next
 - **PWA**: `vite-plugin-pwa` (Workbox)
 - **Testing & Tooling**: Vitest, React Testing Library, Playwright, ESLint, Prettier
@@ -34,7 +39,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. On first launch, LexiCards seeds a sample deck of **20 essential English → Vietnamese words** and presents a quick onboarding tour.
+Open `http://localhost:5173` in your browser. On first launch, LexiCards seeds both a **20-word English → Vietnamese** starter deck and a **20-word Beginner Japanese → Vietnamese** starter deck (across Lessons 1–4), and presents a quick onboarding tour. Existing users can also add the Japanese starter deck anytime from **Settings**.
 
 ## Available Scripts
 
@@ -53,15 +58,15 @@ Open `http://localhost:5173` in your browser. On first launch, LexiCards seeds a
 
 ```text
 src/
-├── components/   # UI primitives, layout shell, deck/card modals, study modes, onboarding
-├── db/           # Dexie schema, CRUD/SRS actions, 20-word EN->VI seed data
-├── features/     # Pure SM-2 engine, TTS, AI assist, gamification, import/export
+├── components/   # UI primitives, layout shell, deck/card modals, JapaneseTerm, study modes, onboarding
+├── db/           # Dexie v2 schema & v1->v2 migration, CRUD/SRS actions, EN & JA seed data
+├── features/     # Pure SM-2 engine, Japanese engine + kanaData, TTS, AI assist, gamification, import/export
 ├── hooks/        # Theme & online status hooks
 ├── i18n/         # English and Vietnamese locale bundles
 ├── lib/          # Utilities, text normalization, Levenshtein distance
-├── pages/        # Route pages (Dashboard, Decks, DeckDetail, Study, Stats, ImportExport, Settings, 404)
+├── pages/        # Dashboard, Decks, DeckDetail (with Lessons), Study, KanaTrainer, Stats, ImportExport, Settings, 404
 ├── store/        # Zustand stores (UI state, toasts)
-├── tests/        # Vitest tests & Playwright E2E smoke suite
+├── tests/        # Vitest tests (SM-2, Japanese, Dexie migration, components) & Playwright E2E suite
 └── types/        # Strict TypeScript domain definitions
 ```
 
