@@ -1,5 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Card, Deck, ReviewLog, TTSCacheEntry, TTSProviderType, UserSettings } from '@/types';
+import type {
+  Card,
+  Deck,
+  ImportHistoryEntry,
+  ReviewLog,
+  TTSCacheEntry,
+  TTSProviderType,
+  UserSettings,
+} from '@/types';
 
 export function getDefaultTTSProvider(): TTSProviderType {
   const proxyUrl = import.meta.env.VITE_TTS_PROXY_URL?.trim();
@@ -12,6 +20,7 @@ export class LexiCardsDatabase extends Dexie {
   reviewLogs!: EntityTable<ReviewLog, 'id'>;
   settings!: EntityTable<UserSettings, 'id'>;
   ttsCache!: EntityTable<TTSCacheEntry, 'key'>;
+  importHistory!: EntityTable<ImportHistoryEntry, 'id'>;
 
   constructor(name = 'LexiCardsDB') {
     super(name);
@@ -58,6 +67,15 @@ export class LexiCardsDatabase extends Dexie {
       reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
       settings: 'id',
       ttsCache: 'key, createdAt',
+    });
+
+    this.version(4).stores({
+      decks: 'id, name, language, createdAt, updatedAt, *tags',
+      cards: 'id, deckId, term, status, dueDate, createdAt, lesson, *tags',
+      reviewLogs: 'id, cardId, deckId, reviewedAt, mode',
+      settings: 'id',
+      ttsCache: 'key, createdAt',
+      importHistory: 'id, deckId, createdAt',
     });
   }
 }

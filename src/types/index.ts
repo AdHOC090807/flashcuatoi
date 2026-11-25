@@ -127,6 +127,27 @@ export interface ToastMessage {
   title: string;
   description?: string;
   variant?: 'default' | 'success' | 'error' | 'warning';
+  durationMs?: number;
+  linkLabel?: string;
+  linkTo?: string;
+  actionLabel?: string;
+  onAction?: () => void | Promise<void>;
+}
+
+export interface ImportHistoryEntry {
+  id: string;
+  createdAt: number;
+  deckId: string;
+  deckName: string;
+  deckLanguage: DeckLanguage;
+  format: string;
+  importedCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  createdNewDeck: boolean;
+  createdCardIds: string[];
+  overwrittenCards: Card[];
+  undoneAt?: number;
 }
 
 export interface BadgeDefinition {

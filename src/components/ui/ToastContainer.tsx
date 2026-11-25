@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, Info, X, XCircle } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,32 @@ export function ToastContainer() {
               <p className="font-semibold">{toast.title}</p>
               {toast.description && (
                 <p className="mt-0.5 text-xs text-muted-foreground">{toast.description}</p>
+              )}
+              {(toast.linkTo || toast.actionLabel) && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {toast.linkTo && toast.linkLabel && (
+                    <Link
+                      to={toast.linkTo}
+                      onClick={() => dismissToast(toast.id)}
+                      className="inline-flex items-center rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
+                    >
+                      {toast.linkLabel}
+                    </Link>
+                  )}
+                  {toast.actionLabel && toast.onAction && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const fn = toast.onAction;
+                        dismissToast(toast.id);
+                        if (fn) void fn();
+                      }}
+                      className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium transition hover:bg-accent"
+                    >
+                      {toast.actionLabel}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <button

@@ -12,6 +12,7 @@ export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   pushToast: (toast) => {
     const id = createId('toast');
+    const durationMs = toast.durationMs ?? 4000;
     set((state) => ({
       toasts: [...state.toasts, { ...toast, id }],
     }));
@@ -19,7 +20,7 @@ export const useToastStore = create<ToastState>((set) => ({
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }));
-    }, 4000);
+    }, durationMs);
   },
   dismissToast: (id) =>
     set((state) => ({
