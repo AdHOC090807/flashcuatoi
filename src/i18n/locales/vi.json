@@ -124,7 +124,25 @@
       "listen": "Luyện nghe"
     },
     "showAnswer": "Hiện đáp án",
+    "hideAnswer": "Úp thẻ lại",
     "flipHint": "Space để lật • Phím 1-4 để đánh giá • Mũi tên để chuyển",
+    "swipeKeyHints": "Vuốt hoặc phím mũi tên để đánh giá • Space lật thẻ • Phím 1-4 • U / Ctrl+Z hoàn tác",
+    "flipFirstToRate": "Hãy lật thẻ trước khi đánh giá",
+    "undo": "Hoàn tác",
+    "undoHint": "Hoàn tác thẻ vừa đánh giá (Ctrl+Z / U)",
+    "undoLast": "Hoàn tác thẻ cuối",
+    "undoAnnouncement": "Đã hoàn tác thẻ trước, còn {{remaining}} thẻ.",
+    "ratedAnnouncement": "Đã đánh giá {{rating}}, còn {{remaining}} thẻ.",
+    "remainingCount": "Còn {{count}}",
+    "doneCount": "Đã xong {{count}}",
+    "cardStackAria": "Thẻ {{current}} trên {{total}}: {{term}}",
+    "dragActionHelp": "Kéo hoặc nhấn mũi tên Trái Học lại, Phải Đã nhớ, Lên Dễ, Xuống Khó. Chạm hoặc Space để lật.",
+    "swipeBadges": {
+      "1": "Học lại",
+      "2": "Khó",
+      "3": "Đã nhớ",
+      "4": "Dễ"
+    },
     "ratings": {
       "1": "Học lại",
       "2": "Khó",
@@ -229,7 +247,19 @@
     "showKanji": "Hiện Kanji (kèm furigana)",
     "showKanjiDesc": "Mặc định tắt để người mới tập trung vào kana trước.",
     "ttsAutoplay": "Tự động phát âm khi sang thẻ mới",
-    "testJaVoice": "Nghe thử giọng Nhật"
+    "testJaVoice": "Nghe thử giọng Nhật",
+    "swipeTitle": "Vuốt & Cử chỉ",
+    "swipeEnabled": "Bật cử chỉ vuốt thẻ",
+    "swipeEnabledDesc": "Kéo thẻ như Tinder / Quizlet để đánh giá nhanh trong chế độ Lật thẻ.",
+    "allowSwipeBeforeFlip": "Cho phép vuốt trước khi lật",
+    "allowSwipeBeforeFlipDesc": "Cho phép vuốt hoặc đánh giá ngay cả khi chưa lật xem đáp án.",
+    "swipeThreshold": "Độ nhạy khi vuốt",
+    "swipeThresholdLight": "Nhạy (60px)",
+    "swipeThresholdMedium": "Cân bằng (100px)",
+    "swipeThresholdFirm": "Chắc tay (140px)",
+    "swipeVerticalEnabled": "Bật vuốt Lên / Xuống (Dễ / Khó)",
+    "swipeVerticalEnabledDesc": "Khi tắt, chỉ vuốt Trái (Học lại) và Phải (Đã nhớ).",
+    "hapticsEnabled": "Rung phản hồi khi đánh giá"
   },
   "japanese": {
     "kana": "Kana (Hiragana / Katakana)",

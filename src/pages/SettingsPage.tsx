@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { AppLanguage, ThemeMode, TTSProviderType } from '@/types';
+import type { AppLanguage, SwipeSensitivity, ThemeMode, TTSProviderType } from '@/types';
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -162,6 +162,97 @@ export function SettingsPage() {
               onCheckedChange={(v) => void updateSettings({ ttsAutoplay: v })}
               aria-label={t('settings.ttsAutoplay')}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Swipe & Gestures */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.swipeTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <label htmlFor="pref-swipe-enabled" className="text-sm font-medium">
+                {t('settings.swipeEnabled')}
+              </label>
+              <p className="text-xs text-muted-foreground">{t('settings.swipeEnabledDesc')}</p>
+            </div>
+            <Switch
+              id="pref-swipe-enabled"
+              checked={settings.swipeEnabled ?? true}
+              onCheckedChange={(v) => void updateSettings({ swipeEnabled: v })}
+              aria-label={t('settings.swipeEnabled')}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+            <div>
+              <label htmlFor="pref-swipe-before-flip" className="text-sm font-medium">
+                {t('settings.allowSwipeBeforeFlip')}
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.allowSwipeBeforeFlipDesc')}
+              </p>
+            </div>
+            <Switch
+              id="pref-swipe-before-flip"
+              checked={settings.allowSwipeBeforeFlip ?? true}
+              onCheckedChange={(v) => void updateSettings({ allowSwipeBeforeFlip: v })}
+              aria-label={t('settings.allowSwipeBeforeFlip')}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+            <div>
+              <label htmlFor="pref-swipe-vertical" className="text-sm font-medium">
+                {t('settings.swipeVerticalEnabled')}
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.swipeVerticalEnabledDesc')}
+              </p>
+            </div>
+            <Switch
+              id="pref-swipe-vertical"
+              checked={settings.swipeVerticalEnabled ?? true}
+              onCheckedChange={(v) => void updateSettings({ swipeVerticalEnabled: v })}
+              aria-label={t('settings.swipeVerticalEnabled')}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="pref-swipe-threshold" className="mb-1.5 block text-sm font-medium">
+                {t('settings.swipeThreshold')}
+              </label>
+              <select
+                id="pref-swipe-threshold"
+                value={settings.swipeThreshold ?? 100}
+                onChange={(e) =>
+                  void updateSettings({
+                    swipeThreshold: Number(e.target.value) as SwipeSensitivity,
+                  })
+                }
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              >
+                <option value={60}>{t('settings.swipeThresholdLight')}</option>
+                <option value={100}>{t('settings.swipeThresholdMedium')}</option>
+                <option value={140}>{t('settings.swipeThresholdFirm')}</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 sm:pt-6">
+              <label htmlFor="pref-haptics-enabled" className="text-sm font-medium">
+                {t('settings.hapticsEnabled')}
+              </label>
+              <Switch
+                id="pref-haptics-enabled"
+                checked={settings.hapticsEnabled ?? true}
+                onCheckedChange={(v) => void updateSettings({ hapticsEnabled: v })}
+                aria-label={t('settings.hapticsEnabled')}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

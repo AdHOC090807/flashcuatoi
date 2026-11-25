@@ -124,7 +124,25 @@
       "listen": "Listening"
     },
     "showAnswer": "Show Answer",
+    "hideAnswer": "Flip to Front",
     "flipHint": "Press Space to flip • 1-4 to rate • Arrows to navigate",
+    "swipeKeyHints": "Swipe or Arrow keys to rate • Space to flip • 1-4 shortcuts • U / Ctrl+Z to undo",
+    "flipFirstToRate": "Flip the card first to rate",
+    "undo": "Undo",
+    "undoHint": "Undo last card (Ctrl+Z / U)",
+    "undoLast": "Undo last card",
+    "undoAnnouncement": "Restored previous card, {{remaining}} cards left.",
+    "ratedAnnouncement": "Rated {{rating}}, {{remaining}} cards left.",
+    "remainingCount": "{{count}} left",
+    "doneCount": "{{count}} done",
+    "cardStackAria": "Flashcard {{current}} of {{total}}: {{term}}",
+    "dragActionHelp": "Drag or press ArrowLeft for Again, ArrowRight for Good, ArrowUp for Easy, ArrowDown for Hard. Tap or press Space to flip.",
+    "swipeBadges": {
+      "1": "Again",
+      "2": "Hard",
+      "3": "Good",
+      "4": "Easy"
+    },
     "ratings": {
       "1": "Again",
       "2": "Hard",
@@ -229,7 +247,19 @@
     "showKanji": "Show Kanji (with furigana)",
     "showKanjiDesc": "Off by default so beginners focus on kana first.",
     "ttsAutoplay": "Autoplay audio on new card",
-    "testJaVoice": "Test Japanese Voice"
+    "testJaVoice": "Test Japanese Voice",
+    "swipeTitle": "Swipe & Gestures",
+    "swipeEnabled": "Enable swipe gestures",
+    "swipeEnabledDesc": "Drag cards in Flip mode to rate cards with Quizlet/Tinder feel.",
+    "allowSwipeBeforeFlip": "Allow swipe before flip",
+    "allowSwipeBeforeFlipDesc": "Allow swiping or rating a card even before flipping to reveal the answer.",
+    "swipeThreshold": "Swipe sensitivity",
+    "swipeThresholdLight": "Sensitive (60px)",
+    "swipeThresholdMedium": "Balanced (100px)",
+    "swipeThresholdFirm": "Firm (140px)",
+    "swipeVerticalEnabled": "Enable Up / Down swipes (Easy / Hard)",
+    "swipeVerticalEnabledDesc": "When off, only Left (Again) and Right (Good) swipes are active.",
+    "hapticsEnabled": "Haptic feedback on swipe"
   },
   "japanese": {
     "kana": "Kana (Hiragana / Katakana)",

@@ -12,6 +12,8 @@ export type AppLanguage = 'en' | 'vi';
 
 export type DeckLanguage = 'en' | 'ja';
 
+export type SwipeSensitivity = 60 | 100 | 140;
+
 export type TTSProviderType = 'proxy' | 'webspeech' | 'elevenlabs_byok';
 
 export interface TTSCacheEntry {
@@ -103,6 +105,11 @@ export interface UserSettings {
   elevenLabsVoiceId?: string;
   elevenLabsModel?: string;
   showKanji: boolean;
+  swipeEnabled?: boolean;
+  allowSwipeBeforeFlip?: boolean;
+  swipeThreshold?: SwipeSensitivity;
+  swipeVerticalEnabled?: boolean;
+  hapticsEnabled?: boolean;
   remindersEnabled: boolean;
   reminderTime: string; // HH:mm
   aiEnabled: boolean;
