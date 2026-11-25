@@ -1,0 +1,14 @@
+name = "lexicards-tts-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://adhoc090807.github.io,http://localhost:5173"
+DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+ALLOWED_MODELS = "eleven_multilingual_v2,eleven_flash_v2_5,eleven_turbo_v2_5"
+ALLOWED_VOICE_IDS = "21m00Tcm4TlvDq8ikWAM,EXAVITQu4vr4xnSDxMaL,ErXwobaYiN019PkySvjV,AZnzlk1XvdvUeBnXmlld"
+RATE_LIMIT_MAX = "30"
+RATE_LIMIT_WINDOW_SEC = "60"
+
+# Set the ElevenLabs API key as a Worker secret (NEVER in this file):
+# npx wrangler secret put ELEVENLABS_API_KEY
