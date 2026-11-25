@@ -8,6 +8,7 @@
   "nav": {
     "dashboard": "Tổng quan",
     "decks": "Bộ thẻ",
+    "kana": "Bảng chữ Kana",
     "stats": "Thống kê",
     "importExport": "Nhập / Xuất",
     "settings": "Cài đặt",
@@ -77,6 +78,9 @@
     "sortName": "Tên (A-Z)",
     "sortDue": "Nhiều thẻ cần ôn nhất",
     "filterTag": "Lọc nhãn",
+    "language": "Ngôn ngữ bộ thẻ",
+    "langEn": "Tiếng Anh",
+    "langJa": "日本語 (Tiếng Nhật)",
     "emptyTitle": "Không tìm thấy bộ thẻ phù hợp",
     "emptyDesc": "Tạo bộ thẻ mới hoặc thay đổi từ khóa tìm kiếm."
   },
@@ -219,7 +223,71 @@
     "dangerZone": "Vùng nguy hiểm",
     "resetData": "Xóa toàn bộ dữ liệu",
     "resetConfirm": "Hành động này sẽ xóa vĩnh viễn tất cả bộ thẻ, từ vựng và lịch sử học. Tiếp tục?",
-    "reseedSample": "Khôi phục bộ thẻ mẫu"
+    "reseedSample": "Khôi phục bộ thẻ mẫu",
+    "addJaSample": "Thêm bộ thẻ tiếng Nhật mẫu",
+    "japaneseTitle": "Hiển thị & Âm thanh tiếng Nhật",
+    "showKanji": "Hiện Kanji (kèm furigana)",
+    "showKanjiDesc": "Mặc định tắt để người mới tập trung vào kana trước.",
+    "ttsAutoplay": "Tự động phát âm khi sang thẻ mới",
+    "testJaVoice": "Nghe thử giọng Nhật"
+  },
+  "japanese": {
+    "kana": "Kana (Hiragana / Katakana)",
+    "romaji": "Romaji",
+    "kanjiOptional": "Kanji (tùy chọn)",
+    "wordType": "Loại từ",
+    "lessonNumber": "Bài học (1..50)",
+    "lessonBadge": "Bài {{num}}",
+    "lessonRangeBadge": "Bài {{from}}–{{to}}",
+    "lessonsTitle": "Theo bài học",
+    "studyRange": "Học các bài",
+    "from": "Từ",
+    "to": "Đến",
+    "verbForms": "Chia động từ (tùy chọn)",
+    "conjugationDrill": "Chia động từ",
+    "noVerbForms": "Thẻ này chưa có dữ liệu chia động từ.",
+    "conjugationPlaceholder": "Gõ thể {{form}} bằng kana hoặc romaji...",
+    "bulkAddHelp": "Mỗi dòng một thẻ: kana | nghĩa | romaji (tùy chọn) | bài (tùy chọn) | kanji (tùy chọn)",
+    "direction": "Chiều học",
+    "dirKanaToVi": "Kana → Việt",
+    "dirViToKana": "Việt → Kana",
+    "dirListenToKana": "Nghe → Kana",
+    "autoplay": "Tự động đọc",
+    "chooseKana": "Chọn từ kana đúng",
+    "typingKanaOrRomaji": "Gõ từ bằng kana hoặc romaji",
+    "typingPlaceholder": "VD: たべる hoặc taberu",
+    "replayAudio": "Nghe lại",
+    "presetBasic": "Mẫu: Anki Tiếng Nhật (Kana, Romaji, Nghĩa, Bài)",
+    "presetFull": "Mẫu: Anki Tiếng Nhật + Kanji & Loại từ",
+    "wordTypes": {
+      "noun": "Danh từ",
+      "verb": "Động từ",
+      "i-adj": "Tính từ đuôi い",
+      "na-adj": "Tính từ đuôi な",
+      "adverb": "Phó từ",
+      "particle": "Trợ từ",
+      "expression": "Mẫu câu / Giao tiếp"
+    }
+  },
+  "kana": {
+    "title": "Luyện bảng chữ Kana",
+    "subtitle": "Học bảng Hiragana và Katakana kèm thẻ ghi nhớ và trắc nghiệm.",
+    "hiragana": "Hiragana",
+    "katakana": "Katakana",
+    "rowGroups": "Nhóm âm",
+    "rows": "Hàng",
+    "quizPrompt": "Chọn cách đọc romaji đúng",
+    "modes": {
+      "chart": "Bảng chữ",
+      "flashcards": "Thẻ ghi nhớ",
+      "quiz": "Trắc nghiệm"
+    },
+    "groups": {
+      "basic": "Âm cơ bản",
+      "dakuten": "Âm đục",
+      "handakuten": "Âm bán đục",
+      "yoon": "Âm ghép"
+    }
   },
   "onboarding": {
     "step1Title": "Chào mừng đến với LexiCards!",

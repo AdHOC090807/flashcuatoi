@@ -8,6 +8,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "decks": "Decks",
+    "kana": "Kana",
     "stats": "Statistics",
     "importExport": "Import / Export",
     "settings": "Settings",
@@ -77,6 +78,9 @@
     "sortName": "Name (A-Z)",
     "sortDue": "Most due cards",
     "filterTag": "Filter tag",
+    "language": "Language",
+    "langEn": "English",
+    "langJa": "日本語 (Japanese)",
     "emptyTitle": "No decks match your filter",
     "emptyDesc": "Create a new deck or adjust your search query."
   },
@@ -219,7 +223,71 @@
     "dangerZone": "Danger Zone",
     "resetData": "Reset All Data",
     "resetConfirm": "This will permanently erase all decks, cards, and study history. Continue?",
-    "reseedSample": "Restore Sample Deck"
+    "reseedSample": "Restore Sample Deck",
+    "addJaSample": "Add Japanese Starter Deck",
+    "japaneseTitle": "Japanese Display & Audio",
+    "showKanji": "Show Kanji (with furigana)",
+    "showKanjiDesc": "Off by default so beginners focus on kana first.",
+    "ttsAutoplay": "Autoplay audio on new card",
+    "testJaVoice": "Test Japanese Voice"
+  },
+  "japanese": {
+    "kana": "Kana (Hiragana / Katakana)",
+    "romaji": "Romaji",
+    "kanjiOptional": "Kanji (optional)",
+    "wordType": "Word Type",
+    "lessonNumber": "Lesson (1..50)",
+    "lessonBadge": "Lesson {{num}}",
+    "lessonRangeBadge": "Lessons {{from}}–{{to}}",
+    "lessonsTitle": "Lessons",
+    "studyRange": "Study lessons",
+    "from": "From",
+    "to": "To",
+    "verbForms": "Verb Conjugations (optional)",
+    "conjugationDrill": "Conjugation",
+    "noVerbForms": "No verb conjugation forms on this card.",
+    "conjugationPlaceholder": "Type {{form}} in kana or romaji...",
+    "bulkAddHelp": "One card per line: kana | meaning | romaji (opt) | lesson (opt) | kanji (opt)",
+    "direction": "Direction",
+    "dirKanaToVi": "Kana → VI",
+    "dirViToKana": "VI → Kana",
+    "dirListenToKana": "Audio → Kana",
+    "autoplay": "Autoplay",
+    "chooseKana": "Choose the matching kana",
+    "typingKanaOrRomaji": "Type the word in kana or romaji",
+    "typingPlaceholder": "e.g. たべる or taberu",
+    "replayAudio": "Replay",
+    "presetBasic": "Preset: Anki Japanese (Kana, Romaji, Meaning, Lesson)",
+    "presetFull": "Preset: Anki Japanese + Kanji & Word Type",
+    "wordTypes": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "i-adj": "i-Adjective",
+      "na-adj": "na-Adjective",
+      "adverb": "Adverb",
+      "particle": "Particle",
+      "expression": "Expression"
+    }
+  },
+  "kana": {
+    "title": "Kana Trainer",
+    "subtitle": "Master Hiragana and Katakana charts, flashcards, and quizzes.",
+    "hiragana": "Hiragana",
+    "katakana": "Katakana",
+    "rowGroups": "Groups",
+    "rows": "Rows",
+    "quizPrompt": "Choose the matching romaji",
+    "modes": {
+      "chart": "Chart",
+      "flashcards": "Flashcards",
+      "quiz": "Quiz"
+    },
+    "groups": {
+      "basic": "Basic",
+      "dakuten": "Dakuten",
+      "handakuten": "Handakuten",
+      "yoon": "Yoon"
+    }
   },
   "onboarding": {
     "step1Title": "Welcome to LexiCards!",

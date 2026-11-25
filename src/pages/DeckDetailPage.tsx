@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   ArrowRightLeft,
+  BookMarked,
   Edit2,
   Gamepad2,
   Headphones,
   Keyboard,
   Layers,
   ListPlus,
+  Play,
   Plus,
+  Repeat2,
   Search,
   Sparkles,
   Trash2,
@@ -24,10 +27,11 @@ import { useToastStore } from '@/store/useToastStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
-import { Card as UiCard, CardContent } from '@/components/ui/Card';
+import { Card as UiCard, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TtsButton } from '@/components/cards/TtsButton';
+import { JapaneseTerm } from '@/components/cards/JapaneseTerm';
 import { CardFormModal } from '@/components/cards/CardFormModal';
 import { BulkAddModal } from '@/components/cards/BulkAddModal';
 import { MoveCardModal } from '@/components/cards/MoveCardModal';
@@ -35,6 +39,7 @@ import type { Card } from '@/types';
 
 export function DeckDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const pushToast = useToastStore((s) => s.pushToast);
 
@@ -44,7 +49,13 @@ export function DeckDetailPage() {
   const logs = useLiveQuery(() => db.reviewLogs.toArray());
   const settings = useLiveQuery(() => db.settings.get('default'));
 
+  const isJapanese = deck?.language === 'ja';
+  const showKanji = Boolean(settings?.showKanji);
+
   const [search, setSearch] = useState('');
+  const [lessonFilter, setLessonFilter] = useState<string>('all');
+  const [lessonFrom, setLessonFrom] = useState<number>(1);
+  const [lessonTo, setLessonTo] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
@@ -64,19 +75,52 @@ export function DeckDetailPage() {
     return getDeckCounts(cards, newStudiedToday, settings.dailyNewLimit);
   }, [cards, logs, settings]);
 
+  const lessonGroups = useMemo(() => {
+    if (!cards) return [];
+    const map = new Map<number, Card[]>();
+    cards.forEach((c) => {
+      if (typeof c.lesson === 'number' && c.lesson > 0) {
+        const arr = map.get(c.lesson) ?? [];
+        arr.push(c);
+        map.set(c.lesson, arr);
+      }
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([lessonNum, lessonCards]) => {
+        const learned = lessonCards.filter((c) => c.status !== 'new').length;
+        const mastered = lessonCards.filter((c) => c.interval >= 21).length;
+        const pct = Math.round((learned / lessonCards.length) * 100);
+        return { lessonNum, total: lessonCards.length, learned, mastered, pct };
+      });
+  }, [cards]);
+
+  const hasVerbConjugations = useMemo(() => {
+    if (!cards) return false;
+    return cards.some(
+      (c) =>
+        c.verbForms && (c.verbForms.masu || c.verbForms.te || c.verbForms.ta || c.verbForms.nai)
+    );
+  }, [cards]);
+
   const filteredCards = useMemo(() => {
     if (!cards) return [];
     const q = search.trim().toLowerCase();
     return cards
-      .filter(
-        (c) =>
+      .filter((c) => {
+        const matchesLesson = lessonFilter === 'all' || String(c.lesson ?? '') === lessonFilter;
+        const matchesQuery =
           !q ||
           c.term.toLowerCase().includes(q) ||
+          (c.kana?.toLowerCase().includes(q) ?? false) ||
+          (c.romaji?.toLowerCase().includes(q) ?? false) ||
+          (c.kanji?.toLowerCase().includes(q) ?? false) ||
           c.meaning.toLowerCase().includes(q) ||
-          c.tags.some((tag) => tag.toLowerCase().includes(q))
-      )
-      .sort((a, b) => b.createdAt - a.createdAt);
-  }, [cards, search]);
+          c.tags.some((tag) => tag.toLowerCase().includes(q));
+        return matchesLesson && matchesQuery;
+      })
+      .sort((a, b) => (a.lesson ?? 999) - (b.lesson ?? 999) || b.createdAt - a.createdAt);
+  }, [cards, search, lessonFilter]);
 
   if (deck === undefined || !cards || !counts) {
     return (
@@ -118,7 +162,13 @@ export function DeckDetailPage() {
     { mode: 'typing', label: t('study.modes.typing'), icon: Keyboard },
     { mode: 'match', label: t('study.modes.match'), icon: Gamepad2 },
     { mode: 'listen', label: t('study.modes.listen'), icon: Headphones },
+    ...(isJapanese && hasVerbConjugations
+      ? [{ mode: 'conjugation', label: t('japanese.conjugationDrill'), icon: Repeat2 }]
+      : []),
   ];
+
+  const minLesson = lessonGroups[0]?.lessonNum ?? 1;
+  const maxLesson = lessonGroups[lessonGroups.length - 1]?.lessonNum ?? 1;
 
   return (
     <div className="space-y-6">
@@ -136,7 +186,10 @@ export function DeckDetailPage() {
             {deck.emoji}
           </span>
           <div>
-            <h1 className="text-2xl font-bold">{deck.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{deck.name}</h1>
+              {isJapanese && <Badge variant="secondary">日本語</Badge>}
+            </div>
             <p className="text-sm text-muted-foreground">{deck.description}</p>
           </div>
         </div>
@@ -200,16 +253,113 @@ export function DeckDetailPage() {
         </CardContent>
       </UiCard>
 
+      {/* Lessons Section (Bài 1..50) */}
+      {(isJapanese || lessonGroups.length > 0) && lessonGroups.length > 0 && (
+        <UiCard>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BookMarked className="h-4 w-4 text-primary" />
+              <span>{t('japanese.lessonsTitle')}</span>
+            </CardTitle>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{t('japanese.studyRange')}:</span>
+              <label className="flex items-center gap-1">
+                <span>{t('japanese.from')}</span>
+                <select
+                  aria-label="Lesson range start"
+                  value={lessonFrom || minLesson}
+                  onChange={(e) => setLessonFrom(Number(e.target.value))}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  {lessonGroups.map((g) => (
+                    <option key={g.lessonNum} value={g.lessonNum}>
+                      {t('japanese.lessonBadge', { num: g.lessonNum })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1">
+                <span>{t('japanese.to')}</span>
+                <select
+                  aria-label="Lesson range end"
+                  value={Math.max(lessonFrom, lessonTo || maxLesson)}
+                  onChange={(e) => setLessonTo(Number(e.target.value))}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  {lessonGroups.map((g) => (
+                    <option key={g.lessonNum} value={g.lessonNum}>
+                      {t('japanese.lessonBadge', { num: g.lessonNum })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const from = lessonFrom || minLesson;
+                  const to = Math.max(from, lessonTo || maxLesson);
+                  navigate(`/study/${deck.id}?mode=flip&lessonFrom=${from}&lessonTo=${to}`);
+                }}
+              >
+                <Play className="h-3.5 w-3.5" />
+                <span>{t('dashboard.studyNow')}</span>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {lessonGroups.map((g) => (
+              <Link
+                key={g.lessonNum}
+                to={`/study/${deck.id}?mode=flip&lessonFrom=${g.lessonNum}&lessonTo=${g.lessonNum}`}
+                className="rounded-xl border border-border p-3 transition hover:border-primary/60 hover:bg-accent/40"
+              >
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span>{t('japanese.lessonBadge', { num: g.lessonNum })}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {g.learned}/{g.total}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${g.pct}%` }}
+                  />
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </UiCard>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('common.search')}
-            className="pl-9"
-          />
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('common.search')}
+              className="pl-9"
+            />
+          </div>
+
+          {lessonGroups.length > 0 && (
+            <select
+              aria-label={t('japanese.lessonsTitle')}
+              value={lessonFilter}
+              onChange={(e) => setLessonFilter(e.target.value)}
+              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">{t('common.all')}</option>
+              {lessonGroups.map((g) => (
+                <option key={g.lessonNum} value={String(g.lessonNum)}>
+                  {t('japanese.lessonBadge', { num: g.lessonNum })}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -251,22 +401,29 @@ export function DeckDetailPage() {
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  aria-label={`Select ${card.term}`}
+                  aria-label={`Select ${card.kana || card.term}`}
                   checked={selectedIds.includes(card.id)}
                   onChange={() => toggleSelect(card.id)}
                   className="mt-1 h-4 w-4 rounded border-input accent-primary"
                 />
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-base">{card.term}</span>
-                    {card.phonetic && (
+                    <span className="font-semibold text-base">
+                      {isJapanese ? <JapaneseTerm card={card} showKanji={showKanji} /> : card.term}
+                    </span>
+                    {(card.romaji || card.phonetic) && (
                       <span className="font-mono text-xs text-muted-foreground">
-                        {card.phonetic}
+                        {card.romaji || card.phonetic}
                       </span>
                     )}
-                    {card.partOfSpeech && (
+                    {(card.wordType || card.partOfSpeech) && (
                       <Badge variant="outline" className="text-[11px]">
-                        {card.partOfSpeech}
+                        {card.wordType || card.partOfSpeech}
+                      </Badge>
+                    )}
+                    {card.lesson && (
+                      <Badge variant="secondary" className="text-[11px]">
+                        {t('japanese.lessonBadge', { num: card.lesson })}
                       </Badge>
                     )}
                     <Badge
@@ -284,17 +441,26 @@ export function DeckDetailPage() {
                   </div>
                   <p className="text-sm text-foreground">{card.meaning}</p>
                   {card.example && (
-                    <p className="text-xs italic text-muted-foreground">“{card.example}”</p>
+                    <p
+                      lang={isJapanese ? 'ja' : undefined}
+                      className={`text-xs text-muted-foreground ${isJapanese ? 'font-jp' : 'italic'}`}
+                    >
+                      “{card.example}”
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 self-end sm:self-center">
-                <TtsButton text={card.term} size="icon" />
+                <TtsButton
+                  text={isJapanese ? card.kana || card.term : card.term}
+                  lang={isJapanese ? 'ja-JP' : undefined}
+                  size="icon"
+                />
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`${t('common.edit')} ${card.term}`}
+                  aria-label={`${t('common.edit')} ${card.kana || card.term}`}
                   onClick={() => {
                     setEditingCard(card);
                     setCardModalOpen(true);
@@ -306,7 +472,7 @@ export function DeckDetailPage() {
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive"
-                  aria-label={`${t('common.delete')} ${card.term}`}
+                  aria-label={`${t('common.delete')} ${card.kana || card.term}`}
                   onClick={() => setSingleDeleteCard(card)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -359,7 +525,7 @@ export function DeckDetailPage() {
           if (!open) setSingleDeleteCard(null);
         }}
         title={t('common.delete')}
-        description={`Delete "${singleDeleteCard?.term ?? ''}"?`}
+        description={`Delete "${singleDeleteCard?.kana || singleDeleteCard?.term || ''}"?`}
         confirmLabel={t('common.delete')}
         cancelLabel={t('common.cancel')}
         onConfirm={async () => {
