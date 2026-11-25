@@ -87,6 +87,36 @@ Daily study queues prioritize due **Learning** cards, then due **Review** cards,
 - Cloze deletion card template support
 - Optional encrypted peer-to-peer / WebDAV sync
 
+## Deploy the TTS proxy
+
+LexiCards includes a Cloudflare Worker proxy under `worker/` so the deployed GitHub Pages site can use ElevenLabs TTS across devices without exposing your API key or requiring users to enter one.
+
+1. Authenticate Wrangler with your Cloudflare account:
+   ```bash
+   cd worker
+   npm install
+   npx wrangler login
+   ```
+2. Store your ElevenLabs API key as a Worker secret (never in `wrangler.toml` or git):
+   ```bash
+   npx wrangler secret put ELEVENLABS_API_KEY
+   ```
+3. Verify `ALLOWED_ORIGINS` and `DEFAULT_VOICE_ID` under `[vars]` in `worker/wrangler.toml`:
+   ```toml
+   [vars]
+   ALLOWED_ORIGINS = "https://adhoc090807.github.io,http://localhost:5173"
+   DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+   ```
+4. Deploy the Worker and copy the deployed `https://<name>.<subdomain>.workers.dev` URL:
+   ```bash
+   npx wrangler deploy
+   ```
+5. Save the public Worker URL as a GitHub Actions **repository variable** (not a secret) so GitHub Pages builds bake it into `VITE_TTS_PROXY_URL`:
+   ```bash
+   gh variable set VITE_TTS_PROXY_URL --body https://<your-worker-url>.workers.dev
+   ```
+6. Re-run the **Deploy to GitHub Pages** workflow (or push to `main`). Once set, **Settings → TTS Provider** defaults to `ElevenLabs Proxy` and automatically falls back to browser Web Speech if offline or rate-limited.
+
 ## License
 
 [MIT](./LICENSE)

@@ -30,6 +30,7 @@ jobs:
       - name: Build for GitHub Pages
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_TTS_PROXY_URL: ${{ vars.VITE_TTS_PROXY_URL }}
         run: |
           npm run build
           cp dist/index.html dist/404.html
