@@ -126,9 +126,12 @@ export function MatchingMode({
               key={tile.uid}
               type="button"
               disabled={isMatched}
-              onClick={() => handleTileClick(tile)}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                handleTileClick(tile);
+              }}
               className={cn(
-                'flex min-h-[82px] items-center justify-center rounded-xl border p-3 text-center text-sm font-medium transition-all',
+                'flex min-h-[82px] items-center justify-center rounded-xl border p-3 text-center text-sm font-medium transition-colors touch-manipulation select-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isMatched && 'border-emerald-500/40 bg-emerald-500/15 opacity-45',
                 isSelected && 'border-primary bg-primary/15 ring-2 ring-primary',

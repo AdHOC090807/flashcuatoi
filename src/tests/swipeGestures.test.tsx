@@ -13,6 +13,7 @@ import {
   resolveSwipeDirection,
 } from '@/features/study/swipeDecision';
 import { FlipCardMode } from '@/components/study/FlipCardMode';
+import { QuizMode } from '@/components/study/QuizMode';
 import { SettingsPage } from '@/pages/SettingsPage';
 import type { Card } from '@/types';
 
@@ -362,5 +363,58 @@ describe('SwipeableCard + FlipCardMode + Undo integration', () => {
     expect(onPrev).toHaveBeenCalledTimes(1);
 
     autoReadSpy.mockRestore();
+  });
+
+  it('prevents native touchmove page scroll while dragging card on iOS/iPadOS', async () => {
+    render(
+      <FlipCardMode
+        card={makeSampleCard()}
+        canGoPrev={false}
+        canGoNext={false}
+        ttsAutoplay={false}
+        onPrev={vi.fn()}
+        onNext={vi.fn()}
+        onRate={vi.fn()}
+      />
+    );
+
+    const cardGroup = await screen.findByRole('group');
+    const touchEvent = new Event('touchmove', { bubbles: true, cancelable: true });
+    Object.defineProperty(touchEvent, 'touches', { value: [{ clientX: 140, clientY: 120 }] });
+    cardGroup.dispatchEvent(touchEvent);
+    expect(touchEvent.defaultPrevented).toBe(true);
+  });
+
+  it('blurs clicked QuizMode option and mounts fresh buttons when keyed by card', () => {
+    const card1 = makeSampleCard({ id: 'q1', term: 'alpha', meaning: 'một' });
+    const card2 = makeSampleCard({ id: 'q2', term: 'beta', meaning: 'hai' });
+    const deckCards = [
+      card1,
+      card2,
+      makeSampleCard({ id: 'q3', term: 'gamma', meaning: 'ba' }),
+      makeSampleCard({ id: 'q4', term: 'delta', meaning: 'bốn' }),
+    ];
+
+    const { rerender } = render(
+      <QuizMode key={`${card1.id}-0`} card={card1} deckCards={deckCards} onAnswered={vi.fn()} />
+    );
+
+    const optBtn = screen.getByRole('button', { name: /một/ });
+    optBtn.focus();
+    fireEvent.click(optBtn);
+    expect(document.activeElement).not.toBe(optBtn);
+
+    rerender(
+      <QuizMode key={`${card2.id}-1`} card={card2} deckCards={deckCards} onAnswered={vi.fn()} />
+    );
+
+    const nextButtons = screen
+      .getAllByRole('button')
+      .filter((b) => ['1', '2', '3', '4'].some((n) => b.textContent?.includes(n)));
+    nextButtons.forEach((btn) => {
+      expect(btn).toBeEnabled();
+      expect(btn.className).not.toContain('border-emerald-500');
+      expect(btn.className).not.toContain('border-rose-500');
+    });
   });
 });

@@ -212,6 +212,35 @@ test.describe('LexiCards smoke tests', () => {
     await page.getByRole('button', { name: 'Previous', exact: true }).click();
     await expect(page.getByText('1 / 20')).toBeVisible();
 
+    // Verify iPad viewport card faces prevent scroll-chaining (overflow-y: hidden & touch-action: none)
+    await page.setViewportSize({ width: 820, height: 1180 });
+    const faceStyles = await activeCard.evaluate((el) => {
+      const innerFace = el.querySelector('.flip-card-face') as HTMLElement | null;
+      return {
+        cardTouchAction: getComputedStyle(el).touchAction,
+        faceOverflowY: innerFace ? getComputedStyle(innerFace).overflowY : null,
+      };
+    });
+    expect(faceStyles.cardTouchAction).toBe('none');
+    expect(faceStyles.faceOverflowY).toBe('hidden');
+
+    // Switch to Quiz mode and verify next question has clean unselected options (no stale highlight)
+    await page.getByRole('tab', { name: 'Quiz' }).click();
+    const firstQuizChoice = page
+      .locator('button')
+      .filter({ has: page.locator('kbd', { hasText: '1' }) })
+      .first();
+    await firstQuizChoice.click();
+    await expect(page.getByText('2 / 20')).toBeVisible({ timeout: 4000 });
+    const postAdvanceClasses = await page
+      .locator('button')
+      .filter({ has: page.locator('kbd') })
+      .evaluateAll((btns) => btns.map((b) => b.className));
+    for (const cls of postAdvanceClasses) {
+      expect(cls).not.toContain('border-emerald-500');
+      expect(cls).not.toContain('border-rose-500');
+    }
+
     const longTasks = await page.evaluate(
       () => (window as unknown as { __longTaskCount: number }).__longTaskCount
     );

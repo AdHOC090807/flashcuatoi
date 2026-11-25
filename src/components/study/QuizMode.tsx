@@ -179,12 +179,15 @@ export function QuizMode({
           const showResult = selectedId !== null;
           return (
             <Button
-              key={opt.id}
+              key={`${card.id}-${opt.id}`}
               variant="outline"
-              onClick={() => choose(opt)}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                choose(opt);
+              }}
               disabled={showResult}
               className={cn(
-                'h-auto min-h-[64px] justify-between px-4 py-3 text-left whitespace-normal',
+                'h-auto min-h-[64px] justify-between px-4 py-3 text-left whitespace-normal touch-manipulation select-none',
                 showResult &&
                   opt.isCorrect &&
                   'border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200',

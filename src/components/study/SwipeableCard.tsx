@@ -106,7 +106,11 @@ export function SwipeableCard({
 
   const isTopCard = stackDepth === 0;
   const cardRef = useRef<HTMLDivElement>(null);
+  const frontFaceRef = useRef<HTMLDivElement>(null);
+  const backFaceRef = useRef<HTMLDivElement>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
+  const [frontOverflowing, setFrontOverflowing] = useState(false);
+  const [backOverflowing, setBackOverflowing] = useState(false);
 
   const { canRate, evaluate, triggerHaptic, getFlyOutTarget } = useSwipeDecision({
     swipeEnabled,
@@ -335,6 +339,59 @@ export function SwipeableCard({
     return () => window.removeEventListener('blur', handleBlur);
   }, [isTopCard, springBack]);
 
+  // Detect genuinely overflowing card faces so normal cards keep overflow-hidden (prevents iPad Safari scroll-chaining)
+  useEffect(() => {
+    if (!isTopCard) return;
+    const measure = () => {
+      const f = frontFaceRef.current;
+      const b = backFaceRef.current;
+      setFrontOverflowing(Boolean(f && f.scrollHeight > f.clientHeight + 4));
+      setBackOverflowing(Boolean(b && b.scrollHeight > b.clientHeight + 4));
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', measure);
+    };
+  }, [isTopCard, cardId, flipped]);
+
+  // Prevent iOS / iPadOS Safari page scrolling and rubber-banding while dragging the card
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !isTopCard || !swipeEnabled) return;
+
+    const onNativeTouchMove = (ev: TouchEvent) => {
+      if (ev.touches.length > 1) return;
+      const target = ev.target as HTMLElement | null;
+      if (target?.closest('button, a, input, select, textarea, [data-no-swipe="true"]')) {
+        return;
+      }
+
+      const state = pointerStateRef.current;
+      if (state.scrollCaptured) return;
+
+      const touch = ev.touches[0];
+      if (state.scrollableEl && touch) {
+        const dx = touch.clientX - state.startX;
+        const dy = touch.clientY - state.startY;
+        if (Math.abs(dy) > Math.abs(dx) && canScrollVertically(state.scrollableEl, dy)) {
+          return;
+        }
+      }
+
+      if (ev.cancelable) {
+        ev.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchmove', onNativeTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchmove', onNativeTouchMove);
+    };
+  }, [isTopCard, swipeEnabled]);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isTopCard || animatingRef.current) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -499,6 +556,7 @@ export function SwipeableCard({
       }
       style={{
         zIndex: 30 - stackDepth * 10,
+        touchAction: isTopCard && swipeEnabled ? 'none' : 'auto',
       }}
       aria-hidden={!isTopCard}
       className={cn('absolute inset-0', isTopCard ? 'pointer-events-auto' : 'pointer-events-none')}
@@ -536,14 +594,35 @@ export function SwipeableCard({
             'cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
         )}
       >
-        <div className={cn('flip-card-inner rounded-2xl', flipped && 'is-flipped')}>
+        <div
+          style={{ touchAction: isTopCard && swipeEnabled ? 'none' : 'auto' }}
+          className={cn('flip-card-inner rounded-2xl', flipped && 'is-flipped')}
+        >
           {/* Front Face */}
-          <div className="flip-card-face flex flex-col justify-between overflow-y-auto overflow-x-hidden rounded-2xl border border-border bg-card p-6 shadow-md sm:p-8">
+          <div
+            ref={frontFaceRef}
+            style={{
+              touchAction: frontOverflowing ? 'pan-y' : isTopCard && swipeEnabled ? 'none' : 'auto',
+            }}
+            className={cn(
+              'flip-card-face flex flex-col justify-between overflow-x-hidden rounded-2xl border border-border bg-card p-6 shadow-md sm:p-8',
+              frontOverflowing ? 'overflow-y-auto overscroll-y-contain' : 'overflow-y-hidden'
+            )}
+          >
             {frontContent}
           </div>
 
           {/* Back Face */}
-          <div className="flip-card-face flip-card-back flex flex-col justify-between overflow-y-auto overflow-x-hidden rounded-2xl border border-primary/30 bg-card p-6 shadow-md sm:p-8">
+          <div
+            ref={backFaceRef}
+            style={{
+              touchAction: backOverflowing ? 'pan-y' : isTopCard && swipeEnabled ? 'none' : 'auto',
+            }}
+            className={cn(
+              'flip-card-face flip-card-back flex flex-col justify-between overflow-x-hidden rounded-2xl border border-primary/30 bg-card p-6 shadow-md sm:p-8',
+              backOverflowing ? 'overflow-y-auto overscroll-y-contain' : 'overflow-y-hidden'
+            )}
+          >
             {backContent}
           </div>
         </div>

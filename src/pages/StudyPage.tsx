@@ -518,6 +518,7 @@ export function StudyPage() {
         />
       ) : mode === 'quiz' && currentCard ? (
         <QuizMode
+          key={`quiz-${currentCard.id}-${currentIndex}`}
           card={currentCard}
           deckCards={rawCards ?? deckCards}
           isJapanese={isJapanese}
@@ -528,6 +529,7 @@ export function StudyPage() {
         />
       ) : mode === 'typing' && currentCard ? (
         <TypingMode
+          key={`typing-${currentCard.id}-${currentIndex}`}
           card={currentCard}
           isJapanese={isJapanese}
           showKanji={showKanji}
@@ -537,6 +539,7 @@ export function StudyPage() {
         />
       ) : mode === 'listen' && currentCard ? (
         <ListeningMode
+          key={`listen-${currentCard.id}-${currentIndex}`}
           card={currentCard}
           deckCards={rawCards ?? deckCards}
           isJapanese={isJapanese}
@@ -545,6 +548,7 @@ export function StudyPage() {
         />
       ) : mode === 'conjugation' && currentCard ? (
         <ConjugationDrillMode
+          key={`conj-${currentCard.id}-${currentIndex}`}
           card={currentCard}
           showKanji={showKanji}
           onAnswered={(r, ok) => void handleRateOrAnswer(r, ok)}

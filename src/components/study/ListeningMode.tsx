@@ -209,12 +209,15 @@ export function ListeningMode({
             const showResult = selectedId !== null;
             return (
               <Button
-                key={opt.id}
+                key={`${card.id}-${opt.id}`}
                 variant="outline"
                 disabled={showResult}
-                onClick={() => handlePick(opt)}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handlePick(opt);
+                }}
                 className={cn(
-                  'h-auto min-h-[60px] justify-between px-4 py-3 text-left whitespace-normal',
+                  'h-auto min-h-[60px] justify-between px-4 py-3 text-left whitespace-normal touch-manipulation select-none',
                   showResult &&
                     opt.isCorrect &&
                     'border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200',
