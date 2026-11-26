@@ -7,6 +7,29 @@ import '@/i18n';
 import '@/index.css';
 import { App } from '@/App';
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloading = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloading) {
+      reloading = true;
+      window.location.reload();
+    }
+  });
+
+  const checkForSwUpdate = () => {
+    void navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {}));
+  };
+
+  window.addEventListener('load', checkForSwUpdate);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkForSwUpdate();
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
